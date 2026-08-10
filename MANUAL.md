@@ -1,0 +1,290 @@
+# MANUAL
+
+Everything proven-reason does, what it refuses to do, and how to read what it
+tells you when it refuses.
+
+---
+
+## 1. Install and check
+
+```bash
+git clone https://github.com/devkancheti4-design/proven-reason
+cd proven-reason
+python3 -m pip install -e .
+```
+
+**Python 3.10+** and a **C compiler on `PATH`** (`cc`). No model, no API key,
+no network. The compiler is not optional — it is the thing that proves.
+
+```bash
+python3 -c "from proven_reason import receipt; print(receipt())"
+```
+
+**It must print `1`.** If it prints anything else, stop. The evaluator is
+disagreeing with the machine at `INT_MIN`, and nothing this library says can
+be trusted until that is fixed. This is not a formality — that exact defect
+was real here once, and it cost eleven boundary faults before it was found.
+
+---
+
+## 2. `check` — the part that proves
+
+```python
+from proven_reason import check
+
+v = check("return (x + x);", "return x * 2;")
+
+v.proven        # True
+v.verdict       # 'PROVEN'
+v.mismatches    # 0
+v.first_bad     # 0
+v.seconds       # 10.7
+print(v)        # PROVEN — agrees on every one of 4,294,967,296 int32 inputs...
+```
+
+Both arguments are **C function bodies** for `int f(int x)` — statements,
+including `return`. There is no sampling: every input is run.
+
+### The verdicts
+
+| verdict | meaning |
+|---|---|
+| `PROVEN` | agrees on **every** int32 input |
+| `WRONG` | disagrees; `first_bad` is the input that breaks it |
+| `SUSPECTED-FOLD` | the sweep was too fast to be real. **Not a proof.** |
+| `NO-COMPILE` | one side did not compile |
+
+### Why a fast sweep is a failure, not a success
+
+4.29 billion iterations cannot finish in under two seconds. When they appear
+to, the compiler has folded both sides to a constant and compared nothing. So
+a sub-2s result is re-run at `-O1`, and if it is still instant it comes back
+`SUSPECTED-FOLD`. Treat that as unverified.
+
+The harness uses `-fwrapv` (signed overflow must wrap, or the compiler may
+delete the very case you are testing), `-fno-lto` (no merging the two
+functions into one), `noinline` on both sides, and a `volatile` sink so
+neither loop can be optimised away.
+
+### A `WRONG` verdict is the most useful one
+
+```
+WRONG — disagrees on 47 of 4,294,967,296 inputs, first at x=1024.
+Add that input to your examples and ask again.
+```
+
+That input **is** the fix. One missing input out of 4.29 billion was measured
+to leave an answer ambiguous; adding it made the answer unique.
+
+---
+
+## 3. `gate` — bolting it onto a code generator
+
+This is the product.
+
+```python
+from proven_reason import gate
+
+g = gate(candidate_c, reference_c)
+
+g.outcome   # 'PASS' | 'FIX' | 'REFUSE'
+g.code      # what is safe to ship, or None
+g.safe      # True for PASS and FIX
+g.verdict   # the underlying Verdict
+g.note      # why
+```
+
+| outcome | what happened | what ships |
+|---|---|---|
+| **PASS** | swept clean | the model's own code |
+| **FIX** | wrong; a proven shelf rule fits | the shelf rule |
+| **REFUSE** | wrong, nothing fits | **nothing** |
+
+`REFUSE` is **safe**. The caller gets nothing rather than something wrong.
+There is deliberately no fourth outcome.
+
+### A worked repair
+
+```python
+g = gate("return x & 255;", "return x < 0 ? 0 : (x > 255 ? 255 : x);")
+
+g.outcome   # 'FIX'
+g.verdict   # WRONG — 4,278,189,825 of 4,294,967,296, first at x=-2147483647
+g.code      # 'return (((((((255 + ...' — SATU8, proven over the whole domain
+```
+
+`x & 255` wraps where a clamp saturates. It is right on 16,777,471 inputs and
+wrong on the other four and a quarter billion — **and it passes every unit
+test anyone writes for it**, because nobody tests `x = -2147483647`.
+
+### In a loop
+
+```python
+def safe_generate(ask_model, ticket, reference):
+    for attempt in range(3):
+        g = gate(ask_model(ticket), reference)
+        if g.safe:
+            return g.code
+        ticket += "\n(previous attempt failed at x=%d)" % g.verdict.first_bad
+    return None      # refused three times; ship nothing
+```
+
+Feeding `first_bad` back into the prompt is free and it works — the failing
+input is the most informative sentence you can add.
+
+---
+
+## 4. `catalog` — the shelf
+
+Thirty-one proven instructions. **No human wrote any of these expressions.**
+
+```python
+from proven_reason import catalog, find, fits, verify_all
+
+for ins in catalog():
+    print(ins)                  # SATU8   saturate into an unsigned byte  (((...
+
+find("satu8")                   # one instruction, or None
+find("satu8").ref               # 'return x < 0 ? 0 : (x > 255 ? 255 : x);'
+find("satu8")(300)              # 255  — evaluate it directly
+
+fits([(0,0), (1,2), (2,4)])     # every shelf rule matching those pairs,
+                                # smallest first
+```
+
+Nothing here has to be taken on trust. Every entry carries the C reference it
+was proven against:
+
+```python
+verify_all()      # re-proves all 31 over 2^32 each, ~4 minutes
+```
+
+```
+   1/31  NOT     PROVEN
+   2/31  NEG     PROVEN
+   ...
+  31/31  SATB    PROVEN
+
+31 of 31 re-proven over all 4,294,967,296 inputs.
+```
+
+**1,733,015 evaluations to author the shelf. 238.4 seconds to verify it.**
+Proving is the wall, not searching.
+
+---
+
+## 5. `reason` — and the line it will not cross
+
+```python
+from proven_reason import reason
+
+r = reason([(0, 0), (1, 2), (2, 4), (-3, -6), (100, 200)])
+
+r.found     # True
+r.expr      # '(x << 1)'
+r(21)       # 42
+r.verdict   # 'EXACT-ON-EXAMPLES(5)'
+```
+
+Give it a reference and the word gets stronger:
+
+```python
+r = reason(pairs, reference="return x * 2;")
+r.verdict   # 'PROVEN'
+```
+
+**It is a lookup, not a search.** The engine that authors rules is not in this
+package. `reason()` looks through 31 proven instructions and returns the
+simplest one consistent with your examples — and when nothing fits it says
+exactly that, which is a narrower claim than "no such rule exists":
+
+```python
+r = reason([(0, 7), (1, 91), (2, -13)])
+r.found     # False
+r.verdict   # 'ABSTAIN'
+r.note      # 'no rule on the 31-instruction shelf reproduces all 3 of your
+            #  examples. This build verifies but does not author, so this is
+            #  not a claim that no such rule exists.'
+```
+
+If you need a rule that is not on the shelf, `check()` still verifies whatever
+you or your model writes. Verification is the part that never runs out.
+
+---
+
+## 6. 64-bit
+
+```python
+from proven_reason.wide import add64, cmp64, LANES, VERDICT
+
+add64(0x7FFFFFFFFFFFFFFF, 1)      # 0x8000000000000000
+cmp64(a, b)                       # -1, 0 or 1, unsigned
+print(VERDICT)
+```
+
+32 bits of input **in total** is the limit, so a 64-bit add lane — `alo`,
+`blo`, carry-in, 65 bits — is not a hard question but an unaskable one. Asked
+as four smaller questions, every part fits, and all four lanes are `PROVEN`
+over their own 2³².
+
+**The lanes are proven. The composition is not, and the module says so.**
+
+```bash
+python3 verify/wide_verify.py            # ~2 minutes
+python3 verify/wide_verify.py --quick    # ~15 seconds
+```
+
+It first proves its C mirror computes exactly what the shipped Python computes
+— and **refuses to report anything if it does not** — then measures. Last run:
+**26,169,803,776 pairs, 0 mismatches, 76.0 seconds**, which is 7.69e-29 of
+2¹²⁸. A composition inherits the weakest word in it.
+
+---
+
+## 7. What it will not do
+
+- **`int32 -> int32`, 32 bits of input in TOTAL.** Not per operand. Two `int`
+  arguments is 64 bits and does not fit. Pack two 16-bit values into one word
+  and it works — and the proof is then over the 2³² packed words.
+  The famous `(lo+hi)/2` binary-search overflow is exactly the kind of bug it
+  **cannot** catch.
+- **It does not author.** Not on this shelf, not for a fee, not slowly.
+- **It is not a language model.** No opinion on prose or API design.
+- **It has no clock.** Bound work by size, never by a timer.
+
+---
+
+## 8. Where it earns its keep
+
+Saturating arithmetic in codecs and DSP · sign extension in instruction
+decoders · colour clamping in graphics · byte swapping in serialization · hash
+mixers · alignment rounding in allocators · fixed-point in game engines.
+
+These are the functions where a wrong answer is invisible in review, passes
+every unit test, and surfaces months later on one input in a billion.
+
+---
+
+## 9. Troubleshooting
+
+| symptom | first thing to check |
+|---|---|
+| `receipt()` is not `1` | **stop.** The evaluator disagrees with the machine. |
+| `RuntimeError: no C compiler` | install one; without it nothing can be proven |
+| verdict is `SUSPECTED-FOLD` | the sweep was too fast to be real — treat as unproven |
+| `NO-COMPILE` | your body is not valid C for `int f(int x)`; no signature, no braces |
+| `gate` returns `REFUSE` a lot | expected — the shelf is 31 rules, not infinite. `check()` still verifies anything. |
+| `reason` abstains | nothing on the shelf fits. It is not saying no rule exists. |
+| a sweep takes ~11s | that is correct. 4.29 billion inputs is not free. |
+
+---
+
+## 10. The honest summary
+
+Give it your code and a definition of what you meant; a compiler checks them
+against every input that exists. So you are either right everywhere, or you
+are told the exact input where you are not.
+
+**It is not smarter than a frontier model.** It is the only participant that
+can tell you *when it is wrong*, and the only one whose silence means
+something.

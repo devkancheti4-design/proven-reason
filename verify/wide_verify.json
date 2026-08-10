@@ -1,0 +1,11 @@
+{
+ "slices": 6,
+ "slice_pairs": 25769803776,
+ "random_pairs": 400000000,
+ "pairs_checked": 26169803776,
+ "add_mismatches": 0,
+ "cmp_mismatches": 0,
+ "seconds": 76.0,
+ "coverage_of_2_128": 7.690614125203942e-29,
+ "verdict": "four PROVEN 16-bit lanes; composition TESTED on 6 exhaustive 2^32 slices (25,769,803,776 pairs) and 400,000,000 random pairs, 0 mismatches \u2014 not PROVEN"
+}

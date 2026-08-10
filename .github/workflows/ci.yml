@@ -1,0 +1,100 @@
+name: ci
+
+# A library whose subject is proof had no tests and no CI. That is the least
+# defensible gap it could have, so this runs on every push.
+#
+# Three jobs, deliberately separated by what they cost:
+#   fast     — the receipt, the semantics, the fences. Seconds. Gates merges.
+#   sweeps   — exhaustive 2^32 verification. Minutes. Also gates merges.
+#   wide     — the 26-billion-pair 64-bit measurement that produces the number
+#              quoted in wide.VERDICT, so that number can never drift from
+#              what was actually run.
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  fast:
+    name: fast checks
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install pytest
+      - name: THE RECEIPT — bug fifteen must stay fixed
+        run: |
+          python -c "
+          from proven_reason import receipt
+          r = receipt()
+          print('receipt() =', r)
+          assert r == 1, 'BUG FIFTEEN IS BACK — nothing here is believable'
+          "
+      - name: tests
+        run: python -m pytest tests/ -q --durations=10
+
+  sweeps:
+    name: exhaustive 2^32 sweeps
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install pytest
+      - name: compiler is present and wraps the way we require
+        run: |
+          cc --version
+          printf '#include <stdio.h>\nint main(void){int x=2147483647; x=x+1; printf("%%d\\n",x);}' > /tmp/w.c
+          cc -O3 -fwrapv -fno-lto -w /tmp/w.c -o /tmp/w && /tmp/w
+      - name: sweep-backed tests
+        run: python -m pytest tests/ -q -k "prove or wrong or catalog" --durations=10
+
+  wide:
+    name: 64-bit measurement (produces the number in VERDICT)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+      - name: measure, and fail if VERDICT overstates what was measured
+        run: |
+          python verify/wide_verify.py --slices 6 --random 400000000
+          python - <<'PY'
+          import json
+          from proven_reason.wide import VERDICT
+          m = json.load(open("verify/wide_verify.json"))
+          assert m["add_mismatches"] == 0 and m["cmp_mismatches"] == 0, m
+          assert str(m["slices"]) in VERDICT, (
+              "VERDICT quotes a slice count that was not measured:\n  %s\n  "
+              "measured %d slices" % (VERDICT, m["slices"]))
+          print("VERDICT agrees with the measurement:")
+          print(" ", VERDICT)
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wide-measurement
+          path: verify/wide_verify.json

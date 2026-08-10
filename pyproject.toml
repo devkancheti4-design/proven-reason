@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "proven-reason"
+version = "0.2.0"
+description = "A bolt-on that tells you when your code is wrong — by running all 4,294,967,296 int32 inputs through it"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
+keywords = ["program-synthesis", "reasoning", "formal-verification", "exhaustive-proof", "inductive"]
+
+[tool.setuptools.packages.find]
+include = ["proven_reason*"]
+
+[project.urls]
+Source = "https://github.com/devkancheti4-design/proven-reason"
+
+[tool.setuptools.package-data]
+proven_reason = ["../catalog/*.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+  "slow: exhaustive 2^32 sweeps \u2014 minutes, not seconds",
+]
