@@ -43,7 +43,33 @@ jobs:
           assert r == 1, 'BUG FIFTEEN IS BACK — nothing here is believable'
           "
       - name: tests
-        run: python -m pytest tests/ -q --durations=10
+        run: python -m pytest tests/ -q -m "not slow" --durations=10
+
+      - name: THE BOUNDARY — the private core must not be in this package
+        run: |
+          python - <<'PYEOF'
+          import os, sys
+          # tests/ is excluded on purpose: it NAMES these terms in order to
+          # assert their absence, which is the opposite of leaking them.
+          bad = []
+          for sub in ("proven_reason", "verify", "examples"):
+              if not os.path.isdir(sub):
+                  continue
+              for f in sorted(os.listdir(sub)):
+                  if not f.endswith(".py"):
+                      continue
+                  src = open(os.path.join(sub, f)).read()
+                  for term in ("sphere_synthesize", "seed_for_window",
+                               "window_for_seed", "window_sd", "Organism",
+                               "collatz", "Collatz"):
+                      if term in src:
+                          bad.append("%s/%s contains %r" % (sub, f, term))
+          if bad:
+              print("BOUNDARY BREACH:")
+              print("\n".join("  " + b for b in bad))
+              sys.exit(1)
+          print("boundary intact: the private core is not in this package")
+          PYEOF
 
   sweeps:
     name: exhaustive 2^32 sweeps

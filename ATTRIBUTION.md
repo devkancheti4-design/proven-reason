@@ -3,8 +3,9 @@
 Written so a claim can be checked line by line. Conflating the layers is how
 the whole thing gets dismissed by someone who reads the code.
 
-*Source paths below (`organism/…`, `duel/…`) refer to the engine repository
-that produced this library, not to this repository.*
+*File references below point into the private engine repository that produced
+this library, not into this one. They are named so the account can be audited
+by whoever holds that repository — they are not paths in this package.*
 
 ---
 
@@ -96,7 +97,7 @@ tie-break.
 The two saturates were the only ISA entries still abstaining, and it was put
 to me that this was probably my limit rather than the engine's. It was, twice.
 
-**Fault 31, the ceiling.** `duel/metal/metal.py:217` reads
+**Fault 31, the ceiling.** The harness capped the ladder at
 `for rung in (1, 2, 3, 4, 5)`. A saturate is not a size-5 expression. I
 measured my own cap and wrote the engine's name next to it — which is fault 3
 of this document, committed again in the same file.
@@ -178,8 +179,8 @@ scoreboard — which is where all 34 faults live.
 6. **A scoreboard that counted correct answers as WRONG**, because folded
    sweeps were bucketed with failures.
 7. **Bounding a search with a wall-clock check between attempts.** The engine
-   has **no internal clock** — verified, there is not one `time` or `signal`
-   reference in `sphere.py`. It walks the whole ladder it is given. So a
+   has **no internal clock** — verified, not one `time` or `signal` reference
+   anywhere in it. It walks the whole ladder it is given. So a
    budget tested *between* rungs bounds nothing: one rung-7 search over 47
    operators ran until it was killed and stalled a whole battery. The only
    real bound is the **rung**, and a gate that ships must use it. Committed
@@ -196,7 +197,8 @@ below — and neither ever reached a result.
 Challenged on the claim that these were engine defects. Re-checked against the
 source rather than memory, and the claim was wrong in **both directions**.
 
-**Bug fifteen is real, and worse than I said.** `organism/synth.py:211`. The
+**Bug fifteen is real, and worse than I said.** (Private repo, the
+evaluator.) The
 old body was `s32(eval(expr))` — Python computed the whole tree in unbounded
 integers and wrapped only the **result**, where C wraps every intermediate.
 Reproduced live just now:
@@ -207,16 +209,15 @@ expression: ((2 & ((-x) >> 31)) + ((x | (-x)) >> 31))    at x = INT_MIN
   old wrap-last        ->  -1      (does not)
 ```
 
-I described its reach as the holdout gate. It is wider. `_eval` is called at
-`sphere.py:155` and `synth.py:131` — the gate — **and** at `autonomy.py:38`
-and `fold.py:153`, which is the value of every registered primitive **during
+I described its reach as the holdout gate. It is wider: the evaluator is
+called at the gate **and** on the value of every registered primitive **during
 the search**. So it could corrupt what got *authored*, not merely what got
 *accepted*. That is a genuine engine defect and understating it was my error.
 
 **Bug sixteen is not the same kind of thing, and pairing them was wrong.**
-`sphere.py:194` and `:244` — a dict primitive can be partial (`None` on a
-guarded input), and the O(1) join assumed total values and would have thrown
-in `_partners`. That is a **crash**, not a wrong answer. It could not produce
+A shelved primitive can be partial (undefined on a guarded input), and a
+fast-path join assumed total values and would have thrown. That is a
+**crash**, not a wrong answer. It could not produce
 a bad expression, only an exception. Listing it beside bug fifteen inflated it.
 
 **The sentence I left out, which is the one that matters:**
@@ -277,16 +278,17 @@ by understanding the expression that comes back.
 The `.note` is a summary. The **event stream** is the diagnosis:
 
 ```
-space D∩I = SHF+SGN+BIT+XOR  (11 operators, 3 consts)
+searching  (11 operators, 3 constants, 0 declared)
 level 1: 29   level 2: 238   level 3: 2,147   level 4: 20,332
-death of the intent shield: re-cuts wider
-space D∩I = LIN+SHF+SGN+BIT+XOR  (16 operators, 3 consts)
+the narrower cut is exhausted; widening
+searching  (16 operators, 3 constants, 0 declared)
 level 1: 39   level 2: 538   level 3: 8,286   level 4: 143,280
 ```
 
-`(16 operators)` — the base set alone, **nothing declared**; with a shelf it
-reads 41. `death of the intent shield` — the word is **exhausted**, already
-opened to every family. The level counts — the space and its growth.
+`(16 operators, 0 declared)` — the base set alone, **nothing declared**; with
+a shelf it reads 41. The widening line — the narrower reading of the request
+is **exhausted**, so intent is not what is missing. The level counts — the
+space and its growth.
 
 Three preconditions: **material counted, intent ruled out, size shown.**
 

@@ -78,34 +78,77 @@ reported as `SUSPECTED-FOLD` after a second run at `-O1`, never as success.
 
 ## What is in this package, and what is not
 
-This is an **artefact, not a factory.**
+**The authoring engine ships. The core that produced it does not.**
 
-The expressions in `catalog/isa.json` were authored by an engine called **the
-sphere**, which is **not included here**. The sphere manufactures engines;
-those engines wrote this library. It is two steps upstream, it is not what
-ships, and it is not what any table below benchmarks.
+There are three layers, and only the middle one is here:
 
-| ships here | not here |
+| | |
 |---|---|
-| `check()` — the exhaustive compiled sweep | the authoring engine |
-| `gate()` — PASS / FIX / REFUSE | the search |
-| `catalog()` — 31 proven instructions, each with its reference | |
-| `reason()` — the smallest proven rule that fits your examples | |
-| `wide` — 64-bit from four PROVEN 16-bit lanes | |
+| **the core** | manufactures engines. **Private. Not in this repository, and not described in it.** |
+| **the engine** | `engine.py` — a size-ordered exhaustive search over a declared grammar. **Ships.** |
+| **proven-reason** | the bolt-on: verify, gate, catalog, 64-bit. **Ships.** |
 
-**So it verifies anything of the shape `int32 -> int32`, and repairs only with
-rules already on the shelf.** `reason()` says so itself rather than pretending:
+So this package can **verify** anything of the shape `int32 -> int32`, and it
+can **author** — size-ordered, proving minimality within the grammar it was
+given. What it cannot do is whatever the private core does on top of that,
+which is not described here and is not needed to use any of this.
+
+| ships | |
+|---|---|
+| `check()` | the exhaustive compiled sweep — the part that proves |
+| `gate()` | PASS / FIX / REFUSE around any code generator |
+| `synthesize()` | the engine — authors, and proves minimality in its grammar |
+| `catalog()` | 31 proven instructions, each with its reference |
+| `reason()` | shelf first, then author |
+| `wide` | 64-bit from four PROVEN 16-bit lanes |
+
+**An abstention states the bounds it holds under and never claims more:**
 
 ```python
 r = reason([(0, 7), (1, 91), (2, -13)])
-r.found     # False
-r.note      # 'no rule on the 31-instruction shelf reproduces all 3 of your
-            #  examples. This build verifies but does not author, so this is
-            #  NOT a claim that no such rule exists.'
+r.found   # False
+r.note    # 'no expression of size <= 3 in this grammar. Space searched:
+          #  23 operators, 13 constants, 31 declared. Levels: 655 23249
+          #  912504. Raise max_size, or declare more material — the second
+          #  is usually the one that is missing.'
 ```
 
-That is a narrower claim than "no such rule exists", and the difference
-matters.
+It cannot say "no such rule exists" and it never appears to. It says: not at
+this size, not in this grammar, not with this material — and each of those is
+a different thing for you to change. A test enforces it.
+
+### Material is the lever
+
+```python
+from proven_reason import reason, synthesize, Grammar, armed
+
+synthesize(pairs)                      # base grammar
+synthesize(pairs, grammar=armed())     # the whole proven catalog DECLARED
+```
+
+Registering is not declaring. Measured on the engine repository, same target,
+same everything except what was declared:
+
+| | evaluations | result |
+|---|---:|---|
+| halves not declared | **5,425,498** | found nothing |
+| halves declared | **424** | size 2, 0.4s |
+
+**12,796×.** Nothing about the search changed.
+
+### What the ladder costs
+
+With the whole catalog declared, measured:
+
+| level | nodes | evaluations | time |
+|---:|---:|---:|---:|
+| 1 | 859 | 3,864 | 0.0s |
+| 2 | 37,044 | 265,859 | 0.4s |
+| 3 | 1,806,713 | 15,991,565 | 25.1s |
+
+`max_size` defaults to **3** for that reason. Level 4 is about a billion
+evaluations and several gigabytes — raise it deliberately, on a target you
+believe needs it.
 
 ---
 
@@ -222,8 +265,11 @@ A composition inherits the weakest word in it.
   you promise anything.
 - **It is not a language model.** No opinion on prose, API design, or anything
   whose answer is not an integer.
-- **It does not author.** That engine is not in this package.
-- **It has no clock.** Bound work by size, not by a timer.
+- **It has no clock.** It walks the whole ladder it is given, however long
+  that takes. Bound work by `max_size`, never by a timer.
+- **Minimal means minimal in the grammar you gave it**, never over all
+  expressions. Hand it fewer operators and it will honestly report a larger
+  answer as minimal.
 
 ## Where it earns its keep
 

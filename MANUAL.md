@@ -173,44 +173,101 @@ Proving is the wall, not searching.
 
 ---
 
-## 5. `reason` — and the line it will not cross
+## 5. `synthesize` and `reason` — the part that authors
 
 ```python
-from proven_reason import reason
+from proven_reason import synthesize, reason, armed, Grammar
 
-r = reason([(0, 0), (1, 2), (2, 4), (-3, -6), (100, 200)])
-
-r.found     # True
-r.expr      # '(x << 1)'
-r(21)       # 42
-r.verdict   # 'EXACT-ON-EXAMPLES(5)'
+a = synthesize([(0, 0), (1, 2), (2, 4), (-3, -6)])
+a.found         # True
+a.expr          # '(x << 1)'
+a.size          # 1
+a.minimal       # True — every smaller size was exhausted, not sampled
+a.evaluations   # 39
 ```
 
-Give it a reference and the word gets stronger:
+`reason()` is the convenience wrapper: it checks the proven shelf first, which
+is free, then authors if nothing there fits.
 
 ```python
-r = reason(pairs, reference="return x * 2;")
-r.verdict   # 'PROVEN'
+r = reason([(x, x ^ (x >> 1)) for x in probes])
+r.expr          # '(x ^ (x >> 1))'      authored
+r = reason(pairs, reference="return x ^ (x >> 1);")
+r.verdict       # 'PROVEN'              swept over all 4,294,967,296 inputs
 ```
 
-**It is a lookup, not a search.** The engine that authors rules is not in this
-package. `reason()` looks through 31 proven instructions and returns the
-simplest one consistent with your examples — and when nothing fits it says
-exactly that, which is a narrower claim than "no such rule exists":
+**The engine's own answer earns no benefit of the doubt.** When you give a
+reference, the authored expression goes through exactly the same sweep a
+model's code goes through, and comes back PROVEN or WRONG on the same terms.
+
+### Material is the lever, and declaring is the act
 
 ```python
-r = reason([(0, 7), (1, 91), (2, -13)])
-r.found     # False
-r.verdict   # 'ABSTAIN'
-r.note      # 'no rule on the 31-instruction shelf reproduces all 3 of your
-            #  examples. This build verifies but does not author, so this is
-            #  not a claim that no such rule exists.'
+synthesize(pairs)                      # base grammar only
+synthesize(pairs, grammar=armed())     # the whole proven catalog DECLARED
 ```
 
-If you need a rule that is not on the shelf, `check()` still verifies whatever
-you or your model writes. Verification is the part that never runs out.
+**Registered is not declared.** An expression the search cannot reach is not
+material, whatever else you have done with it. Measured, same target, same
+everything except what was declared:
 
----
+| | evaluations | result |
+|---|---:|---|
+| halves not declared | **5,425,498** | found nothing |
+| halves declared | **424** | size 2, in 0.4s |
+
+**12,796×.** Nothing about the search changed; six proven expressions became
+available to build with.
+
+Declare your own:
+
+```python
+g = Grammar().with_material([("MY_ROUND", "((x + 7) & -8)")])
+synthesize(pairs, grammar=g)
+```
+
+### What the ladder costs, measured
+
+With the whole catalog declared:
+
+| level | nodes | evaluations | time |
+|---:|---:|---:|---:|
+| 1 | 859 | 3,864 | 0.0s |
+| 2 | 37,044 | 265,859 | 0.4s |
+| 3 | 1,806,713 | 15,991,565 | 25.1s |
+
+`max_size` defaults to **3** for exactly that reason. Level 4 is roughly a
+billion evaluations and several gigabytes. Raise it deliberately.
+
+### Reading an abstention
+
+```python
+r = reason(pairs, on_level=lambda s, n, e: print(s, n, e))
+```
+
+```
+no expression of size <= 3 in this grammar. Space searched: 23 operators,
+13 constants, 31 declared. Levels: 655 23249 912504. Raise max_size, or
+declare more material — the second is usually the one that is missing.
+```
+
+Three bounds, and each is a different thing for you to change:
+
+| what it says | what to do about it |
+|---|---|
+| `size <= 3` | raise `max_size` — but read the cost table first |
+| `23 operators, 13 constants` | the grammar; widen it if your answer needs an operator it lacks |
+| `31 declared` | **usually this one.** Pass `grammar=armed()`, or declare your own proven pieces |
+
+It will not say "no such rule exists", because it cannot know that. It says
+"not at this size, in this grammar, with this material" — and a test in the
+repository fails the build if that ever changes.
+
+### `minimal` means minimal *in that grammar*
+
+Never over all expressions. Hand it fewer operators and it will honestly
+report a larger answer as minimal — which is correct, and is why the grammar
+is reported alongside the answer.
 
 ## 6. 64-bit
 
@@ -248,9 +305,12 @@ It first proves its C mirror computes exactly what the shipped Python computes
   and it works — and the proof is then over the 2³² packed words.
   The famous `(lo+hi)/2` binary-search overflow is exactly the kind of bug it
   **cannot** catch.
-- **It does not author.** Not on this shelf, not for a fee, not slowly.
 - **It is not a language model.** No opinion on prose or API design.
-- **It has no clock.** Bound work by size, never by a timer.
+- **It has no clock.** It walks the whole ladder it is given, however long
+  that takes. Bound work by `max_size`, never by a timer.
+- **The core that produced this engine is not here** and is not described
+  here. What ships is a size-ordered exhaustive search — that, and nothing
+  claimed beyond it.
 
 ---
 

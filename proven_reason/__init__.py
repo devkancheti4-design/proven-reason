@@ -25,19 +25,20 @@ Measured on ten tasks with four free local models on one laptop:
 
 WHAT THIS PACKAGE IS
 --------------------
-An artefact, not a factory. The expressions in `catalog/isa.json` were
-authored by an engine that is **not included here**, and each was proven over
-the whole int32 domain before being written down. This package ships:
+    check()       the exhaustive compiled sweep — the part that proves
+    gate()        PASS / FIX / REFUSE around any code generator
+    synthesize()  the engine — authors, and proves minimality in its grammar
+    catalog()     31 proven instructions, each with its reference
+    reason()      shelf first, then author
+    wide          64-bit arithmetic from four PROVEN 16-bit lanes
 
-    check()      the exhaustive compiled sweep — the part that proves
-    gate()       PASS / FIX / REFUSE around any code generator
-    catalog()    31 proven instructions, each with its reference
-    reason()     the smallest PROVEN rule on the shelf that fits your examples
-    wide         64-bit arithmetic from four PROVEN 16-bit lanes
+The core that produced this engine is **private, not in this distribution,
+and not described in it.** What ships is a size-ordered exhaustive search
+over a declared grammar: it authors, and it proves minimality within that
+grammar — that, and nothing claimed beyond it.
 
-It can verify anything of the shape `int32 -> int32`. It can only *repair*
-with rules already on the shelf — it does not search for new ones, and
-`reason()` says so rather than pretending.
+An abstention states the bounds it holds under — size, grammar, material —
+and never says "no such rule exists", because it cannot know that.
 
 THE DISTINCTION THIS LIBRARY WILL NOT BLUR
 ------------------------------------------
@@ -51,6 +52,7 @@ from __future__ import annotations
 from typing import NamedTuple, Optional, Sequence, Tuple
 
 from .catalog import Instruction, catalog, find, fits, verify_all
+from .engine import Authored, DEFAULT_GRAMMAR, Grammar, synthesize
 from .evaluator import INT_MAX, INT_MIN, evaluate, receipt, s32
 from .sweep import TOTAL_INPUTS, Verdict, check, have_compiler
 
@@ -58,9 +60,20 @@ __version__ = "0.2.0"
 
 __all__ = [
     "check", "gate", "reason", "catalog", "find", "fits", "verify_all",
+    "synthesize", "Grammar", "Authored", "armed",
     "evaluate", "receipt", "s32", "Verdict", "GateResult", "Rule",
     "Instruction", "INT_MIN", "INT_MAX", "TOTAL_INPUTS", "have_compiler",
 ]
+
+
+def armed() -> Grammar:
+    """The default grammar with the whole proven catalog DECLARED as material.
+
+    Registering is not declaring. This is the declaring, and on this codebase
+    that distinction was worth 2,927x on one target and 12,796x on another.
+    Use it unless you have a reason not to.
+    """
+    return DEFAULT_GRAMMAR.with_material(catalog())
 
 
 class GateResult(NamedTuple):
@@ -88,7 +101,8 @@ class GateResult(NamedTuple):
 
 
 def gate(candidate: str, reference: str,
-         pairs: Optional[Sequence[Tuple[int, int]]] = None) -> GateResult:
+         pairs: Optional[Sequence[Tuple[int, int]]] = None,
+         max_size: int = 3) -> GateResult:
     """Put generated C through the sweep and decide what may ship.
 
         candidate   a C body for `int f(int x)` — what your model wrote
@@ -115,9 +129,30 @@ def gate(candidate: str, reference: str,
                               "rejected (%s); replaced with PROVEN shelf rule "
                               "%s" % (_short(v), ins.name))
 
+    # Nothing shelved fits. AUTHOR one, then make the compiler judge it —
+    # the engine's answer gets no more benefit of the doubt than the model's.
+    if pairs and max_size > 0:
+        ex = list(pairs)
+        cut = max(1, len(ex) * 3 // 4)
+        for size in range(1, max_size + 1):
+            a = synthesize(ex[:cut], holdout=ex[cut:], grammar=armed(),
+                           max_size=size)
+            if a.found:
+                cand = "return %s;" % a.expr
+                av = check(cand, reference)
+                if av.proven:
+                    return GateResult("FIX", cand, v,
+                                      "rejected (%s); engine authored a "
+                                      "replacement in %s evaluations and the "
+                                      "sweep proved it"
+                                      % (_short(v),
+                                         "{:,}".format(a.evaluations)))
+                break
+
     return GateResult("REFUSE", None, v,
-                      "rejected (%s) and nothing on the shelf fits — nothing "
-                      "ships" % _short(v))
+                      "rejected (%s); nothing on the shelf fits and nothing "
+                      "of size <= %d was authored — nothing ships"
+                      % (_short(v), max_size))
 
 
 def _short(v: Verdict) -> str:
@@ -173,38 +208,72 @@ class Rule(NamedTuple):
 
 
 def reason(pairs: Sequence[Tuple[int, int]],
-           reference: Optional[str] = None) -> Rule:
-    """The smallest PROVEN rule on the shelf that fits every one of `pairs`.
+           reference: Optional[str] = None,
+           max_size: int = 3,
+           on_level=None) -> Rule:
+    """The smallest rule that reproduces every one of `pairs`.
 
         reason([(0,0), (1,2), (2,4), (-3,-6)])
+        # (x << 1)  [EXACT-ON-EXAMPLES(4)]
 
-    WHAT THIS DOES NOT DO, stated here rather than discovered later: it does
-    **not search** for a new expression. The engine that authors rules is not
-    part of this package. This looks through 31 proven instructions and
-    returns the simplest one consistent with your examples.
+    It looks on the proven shelf first — that is free — and if nothing there
+    fits it AUTHORS one, size-ordered, with the whole catalog declared as
+    material. The first size that matches is minimal in that grammar.
 
-    So an abstention here means "nothing on this shelf fits", which is a
-    narrower claim than "no such rule exists" — and the note says which.
+    Give it `reference=` and the verdict gets stronger: the authored
+    expression is swept against your definition over all 4,294,967,296 inputs
+    and comes back PROVEN or WRONG. The engine's own answer earns no benefit
+    of the doubt — the compiler judges it exactly as it judges anyone's.
+
+    `on_level(size, nodes, evaluations)` streams the ladder. When it abstains
+    that stream is the diagnosis: it shows the space, its growth, and what was
+    declared, so you can tell whether size or material is what ran out.
+
+    ON max_size. The default is 3 because that is what the measurement
+    supports. With the whole catalog declared, the ladder costs:
+
+        level 1        859 nodes         3,864 evaluations     0.0s
+        level 2     37,044 nodes       265,859 evaluations     0.4s
+        level 3  1,806,713 nodes    15,991,565 evaluations    25.1s
+
+    Level 4 is about a billion evaluations and several gigabytes. Raise it
+    deliberately, on a target you believe needs it, not by default.
     """
     if not pairs:
         return Rule(False, None, "NO-EXAMPLES",
                     "give it at least one (input, output) pair")
 
-    hits = fits(pairs)
-    if not hits:
-        return Rule(False, None, "ABSTAIN",
-                    "no rule on the %d-instruction shelf reproduces all %d of "
-                    "your examples. This build verifies but does not author, "
-                    "so this is not a claim that no such rule exists."
-                    % (len(catalog()), len(pairs)))
+    # 1. the shelf — already proven, and instant
+    for ins in fits(pairs):
+        if reference is None:
+            return Rule(True, ins.expr, "EXACT-ON-EXAMPLES(%d)" % len(pairs),
+                        "fits all %d examples, and is PROVEN equal to `%s` "
+                        "over every int32 input" % (len(pairs), ins.ref), ins)
+        v = check("return %s;" % ins.expr, reference)
+        if v.proven:
+            return Rule(True, ins.expr, v.verdict, str(v), ins)
+        break
 
-    best = hits[0]
+    # 2. author it
+    ex = list(pairs)
+    cut = max(1, len(ex) * 3 // 4)
+    a = None
+    for size in range(1, max_size + 1):
+        a = synthesize(ex[:cut], holdout=ex[cut:], grammar=armed(),
+                       max_size=size, on_level=on_level)
+        if a.found:
+            break
+
+    if a is None or not a.found:
+        return Rule(False, None, "ABSTAIN", a.note if a else "no examples")
+
     if reference is None:
-        return Rule(True, best.expr, "EXACT-ON-EXAMPLES(%d)" % len(pairs),
-                    "fits all %d examples and is PROVEN equal to `%s` over "
-                    "every int32 input. Supply reference= to have it swept "
-                    "against YOUR definition." % (len(pairs), best.ref), best)
+        return Rule(True, a.expr, "EXACT-ON-EXAMPLES(%d)" % len(pairs),
+                    "authored in %s evaluations, minimal at size %d in the "
+                    "declared grammar. Supply reference= to have it swept "
+                    "over all %s inputs."
+                    % ("{:,}".format(a.evaluations), a.size,
+                       "{:,}".format(TOTAL_INPUTS)))
 
-    v = check("return %s;" % best.expr, reference)
-    return Rule(v.proven, best.expr if v.proven else None, v.verdict,
-                str(v), best if v.proven else None)
+    v = check("return %s;" % a.expr, reference)
+    return Rule(v.proven, a.expr if v.proven else None, v.verdict, str(v))

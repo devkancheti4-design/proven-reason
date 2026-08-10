@@ -208,14 +208,23 @@ def test_reason_does_not_claim_proven_without_a_reference():
     assert r.verdict != "PROVEN"
 
 
-def test_an_abstention_says_it_is_a_shelf_miss_not_a_proof_of_absence():
-    """The honesty that separates this build from the engine that made it."""
+def test_an_abstention_is_bounded_and_never_claims_absolute_absence():
+    """An abstention must state the bounds it holds under.
+
+    "No rule exists" is a claim this cannot make and must never appear to.
+    What it CAN say is: no expression of size <= N, in THIS grammar, with
+    THIS much material. All three qualifiers have to be in the note, because
+    each one is a different thing for the caller to change.
+    """
     r = P.reason([(0, 7), (1, 91), (2, -13), (3, 55), (4, -1000)])
     assert not r.found
     assert r.verdict == "ABSTAIN"
-    assert "does not author" in r.note, (
-        "an abstention here means 'nothing on the shelf fits', and must not "
-        "be phrased as 'no such rule exists'")
+    for qualifier in ("size <=", "grammar", "operators", "declared"):
+        assert qualifier in r.note, (
+            "abstention must name %r as a bound it holds under; got: %s"
+            % (qualifier, r.note))
+    for overclaim in ("no such rule exists", "impossible", "cannot exist"):
+        assert overclaim not in r.note.lower()
 
 
 def test_reason_with_no_examples_is_refused_not_guessed():
@@ -282,16 +291,84 @@ def test_verdict_does_not_overstate_the_recorded_measurement():
 # THE BOUNDARY. This package ships an artefact, not the engine. It must not
 # accidentally start shipping the engine again.
 # =====================================================================
-def test_the_engine_is_not_in_this_package():
+def test_the_core_is_not_in_this_package():
+    """The authoring ENGINE ships. The CORE that produced it does not.
+
+    This test is the boundary made mechanical: if any of the core's machinery
+    is ever pasted back in, the build fails rather than the leak shipping.
+    """
     pkg = os.path.join(ROOT, "proven_reason")
     files = sorted(f for f in os.listdir(pkg) if f.endswith(".py"))
-    assert files == ["__init__.py", "catalog.py", "evaluator.py",
+    assert files == ["__init__.py", "catalog.py", "engine.py", "evaluator.py",
                      "sweep.py", "wide.py"], files
-    assert not os.path.isdir(os.path.join(pkg, "organism")), (
-        "the authoring engine must not be in this package")
+    forbidden = ["sphere_synthesize", "Organism", "seed_for_window",
+                 "window_for_seed", "window_sd", "first_seed", "collatz",
+                 "Collatz"]
     for f in files:
         src = open(os.path.join(pkg, f)).read()
-        assert "sphere_synthesize" not in src, "%s imports the engine" % f
+        for term in forbidden:
+            assert term not in src, "%s contains %r" % (f, term)
+
+
+def test_no_public_file_describes_the_core():
+    """Not the code, and not a description of it either."""
+    forbidden = ["sphere_synthesize", "seed_for_window", "collatz", "Collatz",
+                 "organism", "Organism"]
+    for sub in ("proven_reason", "verify", "examples"):
+        d = os.path.join(ROOT, sub)
+        if not os.path.isdir(d):
+            continue
+        for f in os.listdir(d):
+            if not f.endswith(".py"):
+                continue
+            src = open(os.path.join(d, f)).read()
+            for term in forbidden:
+                assert term not in src, "%s/%s mentions %r" % (sub, f, term)
+
+
+# =====================================================================
+# THE ENGINE. It authors, and it proves minimality in its grammar.
+# =====================================================================
+def test_engine_authors_and_claims_minimality_only_for_its_grammar():
+    a = P.synthesize([(0, 0), (1, 2), (2, 4), (-3, -6)])
+    assert a.found and a.minimal
+    assert a(21) == 42
+
+
+def test_engine_authors_what_the_shelf_does_not_hold():
+    """gray code and align-up are not shelved; they must be AUTHORED."""
+    xs = [-2147483648, -1000, -256, -17, -1, 0, 1, 7, 8, 15, 16, 100, 255,
+          2147483647]
+    for name, f in (("gray", lambda x: x ^ (x >> 31 if False else x >> 1)),
+                    ("align8", lambda x: P.s32(x + 7) & ~7)):
+        r = P.reason([(x, f(x)) for x in xs])
+        assert r.found, "%s should be authored, not abstained" % name
+        for x in xs:
+            assert r(x) == f(x)
+
+
+def test_declaring_material_changes_what_is_reachable():
+    """Registered is not declared. armed() is the declaring."""
+    bare = P.Grammar()
+    armed = P.armed()
+    assert len(armed.material) >= 31
+    assert len(bare.material) == 0
+
+
+def test_an_abstention_names_what_ran_out():
+    a = P.synthesize([(0, 7), (1, 91), (2, -13), (3, 55)],
+                     grammar=P.Grammar(consts=(0, 1)), max_size=2)
+    assert not a.found
+    for token in ("operators", "constants", "declared", "Levels"):
+        assert token in a.note, a.note
+
+
+def test_holdout_rejects_rather_than_caveats():
+    """An expression fitting the examples but failing holdout is REJECTED."""
+    ex = [(0, 0), (1, 1), (2, 2)]
+    ho = [(3, 999)]
+    a = P.synthesize(ex, holdout=ho, max_size=2)
+    assert not a.found, "must not return a rule that fails the hold-out"
 
 
 def test_public_api_is_present():
