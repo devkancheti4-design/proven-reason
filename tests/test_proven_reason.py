@@ -502,3 +502,15 @@ def test_gate64_repairs_with_the_lane_composition():
     g2 = gate64("return a + b;", ref)
     assert g2.outcome == "PASS" and "not proof" in g2.note.replace(
         "not pro", "not proof") or g2.outcome == "PASS"
+
+
+
+def test_frontier_and_api_adapters_construct_and_refuse_without_keys():
+    from proven_reason.models import Anthropic, OpenAICompat
+    a = Anthropic("claude-opus-5", api_key=None)
+    if a.key is None:
+        import pytest as _pt
+        with _pt.raises(RuntimeError, match="API key"):
+            a("hello")
+    o = OpenAICompat("gpt-4o", base_url="http://localhost:9")
+    assert o.base.endswith(":9") and o.model == "gpt-4o"

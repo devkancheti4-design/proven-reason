@@ -382,6 +382,15 @@ Running these benchmarks surfaced two real defects — the kind only use finds:
    outgrow RAM while being built; the OS killed six searches mid-level.
    Now `max_nodes` — crossing it is a reported abstention, not a crash.
 
+## For AI/ML engineers
+
+Connect anything — `Ollama` (local, $0), `Anthropic("claude-opus-5")`,
+`OpenAICompat` (OpenAI/Groq/vLLM/LM Studio), or any callable — and the
+guarantee never changes. See [ENGINEERS.md](ENGINEERS.md) for the live
+three-way test (Fable 5 vs Opus 5 vs a fused free 7B: zero wrong shipped in
+every column, and only the fused column's zero is structural), plus CI-gate,
+retry-with-counterexample, and distillation-filter patterns.
+
 ## For students
 
 Free, offline, no key — see [STUDENTS.md](STUDENTS.md): five guided

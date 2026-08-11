@@ -30,7 +30,8 @@ from typing import Callable, Optional
 
 from .reasoner import Gated, Reasoner
 
-__all__ = ["Ollama", "Callable_", "FusedReasoner", "fuse", "strip_body"]
+__all__ = ["Ollama", "Anthropic", "OpenAICompat", "Callable_",
+           "FusedReasoner", "fuse", "strip_body"]
 
 
 def strip_body(reply: str) -> str:
@@ -92,6 +93,76 @@ class Callable_:
 
     def __call__(self, prompt: str) -> Optional[str]:
         return self.fn(prompt)
+
+
+class Anthropic:
+    """Any Claude model via the Anthropic API. Bring your own key:
+
+        export ANTHROPIC_API_KEY=sk-ant-...
+        Anthropic("claude-opus-5")        # or claude-fable-5, claude-sonnet-5
+
+    The fuse does not care that the model is frontier-class: its answer goes
+    through the same sweep as a 7B's, and PASSes only if it is right on every
+    input. In the sealed duel a frontier model shipped 5 wrong answers of 13
+    graded; gated, those would have been repairs and refusals instead."""
+
+    def __init__(self, model: str = "claude-opus-5",
+                 api_key: Optional[str] = None, timeout: float = 120.0,
+                 max_tokens: int = 512):
+        import os as _os
+        self.model = model
+        self.key = api_key or _os.environ.get("ANTHROPIC_API_KEY")
+        self.timeout, self.max_tokens = timeout, max_tokens
+
+    def __call__(self, prompt: str) -> Optional[str]:
+        if not self.key:
+            raise RuntimeError(
+                "no API key: set ANTHROPIC_API_KEY or pass api_key=. "
+                "(Local models via Ollama need no key at all.)")
+        req = urllib.request.Request(
+            "https://api.anthropic.com/v1/messages",
+            data=json.dumps({
+                "model": self.model, "max_tokens": self.max_tokens,
+                "messages": [{"role": "user", "content": prompt}],
+            }).encode(),
+            headers={"Content-Type": "application/json",
+                     "x-api-key": self.key,
+                     "anthropic-version": "2023-06-01"})
+        with urllib.request.urlopen(req, timeout=self.timeout) as r:
+            out = json.load(r)
+        return "".join(b.get("text", "") for b in out.get("content", []))
+
+
+class OpenAICompat:
+    """Any OpenAI-compatible endpoint: OpenAI itself, Groq, Together, vLLM,
+    LM Studio, llama.cpp server — anything speaking /v1/chat/completions.
+
+        OpenAICompat("gpt-4o", api_key=..., base_url="https://api.openai.com")
+        OpenAICompat("local-model", base_url="http://localhost:8000")  # vLLM
+    """
+
+    def __init__(self, model: str, api_key: Optional[str] = None,
+                 base_url: str = "https://api.openai.com",
+                 timeout: float = 120.0):
+        import os as _os
+        self.model = model
+        self.key = api_key or _os.environ.get("OPENAI_API_KEY")
+        self.base = base_url.rstrip("/")
+        self.timeout = timeout
+
+    def __call__(self, prompt: str) -> Optional[str]:
+        headers = {"Content-Type": "application/json"}
+        if self.key:
+            headers["Authorization"] = "Bearer " + self.key
+        req = urllib.request.Request(
+            self.base + "/v1/chat/completions",
+            data=json.dumps({"model": self.model, "temperature": 0,
+                             "messages": [{"role": "user",
+                                           "content": prompt}]}).encode(),
+            headers=headers)
+        with urllib.request.urlopen(req, timeout=self.timeout) as r:
+            out = json.load(r)
+        return out["choices"][0]["message"]["content"]
 
 
 _PROMPT = ("Write the body of a C function `int f(int x)` that does this:\n"
