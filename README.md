@@ -211,12 +211,47 @@ seconds** — the same target, **12,796×**.
 
 ---
 
-## Install
+## Install — three commands to a fused model
 
 ```bash
 git clone https://github.com/devkancheti4-design/proven-reason
 cd proven-reason && python3 -m pip install -e .
 ```
+
+```bash
+ollama pull qwen2.5-coder:7b     # or any model — the guarantee doesn't care
+```
+
+```bash
+proven-reason ask "one if x is odd, else zero" --reference "return x & 1;"
+```
+
+A real first run of exactly that command: the model answered `x % 2` —
+wrong on **1,073,741,824 inputs** (every odd negative) — and what shipped
+was the proven repair:
+
+```
+FIX
+  rejected (wrong on 1,073,741,824 inputs, first at x=-2147483647);
+  engine authored a replacement in 89 evaluations and the sweep proved it
+  (judge said HOLD)
+  ships: return (x & 1);
+```
+
+### Fuse ANY model — three lines
+
+```python
+from proven_reason.models import Ollama, Callable_, fuse
+
+rz = fuse(Ollama("llama3:8b"))                 # any local model
+rz = fuse(Callable_(lambda p: my_api(p)))      # any API, any framework
+out = rz.ask("divide x by two the way C does", "return x / 2;")
+```
+
+The model supplies language; the authored decisions supply judgment; the
+compiler supplies truth. **Swap the model freely — the guarantee never
+changes**, and that is the measured point: four different local models, 41
+wrong answers raw, zero shipped once fused.
 
 Python 3.10+, and a **C compiler on `PATH`** (`cc`). No model, no API key, no
 network. The compiler is not optional — it is the thing that proves.

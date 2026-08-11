@@ -299,8 +299,9 @@ def test_the_core_is_not_in_this_package():
     """
     pkg = os.path.join(ROOT, "proven_reason")
     files = sorted(f for f in os.listdir(pkg) if f.endswith(".py"))
-    assert files == ["__init__.py", "catalog.py", "engine.py", "evaluator.py",
-                     "reasoner.py", "sweep.py", "wide.py"], files
+    assert files == ["__init__.py", "catalog.py", "cli.py", "engine.py",
+                     "evaluator.py", "models.py", "reasoner.py", "sweep.py",
+                     "wide.py"], files
     forbidden = ["sphere_synthesize", "Organism", "seed_for_window",
                  "window_for_seed", "window_sd", "first_seed", "collatz",
                  "Collatz"]
@@ -449,3 +450,39 @@ def test_reasoner_gate_has_no_unsafe_outcome():
         else:
             assert P.check(g.code, ref).proven, (
                 "the reasoner shipped %r and it is NOT proven" % g.code)
+
+
+
+# =====================================================================
+# FUSING. Any model, one guarantee. No network in these tests.
+# =====================================================================
+def test_strip_body_handles_what_models_actually_emit():
+    from proven_reason.models import strip_body
+    assert strip_body("```c\nreturn x & 1;\n```") == "return x & 1;"
+    assert strip_body("return x;") == "return x;"
+    assert strip_body("int f(int x) { return x + 1; }") == "return x + 1;"
+    assert strip_body("") == ""
+
+
+def test_any_callable_fuses():
+    from proven_reason.models import Callable_, fuse
+    m = Callable_(lambda p: "return x + 1;")
+    fz = fuse(m)
+    assert fz.model("anything") == "return x + 1;"
+    assert fz.reasoner is not None
+
+
+def test_cli_parses_without_network():
+    from proven_reason.cli import main
+    import pytest as _pt
+    with _pt.raises(SystemExit):
+        main([])                       # no subcommand -> argparse exits
+
+
+@needs_cc
+@slow
+def test_cli_verify_roundtrip(capsys):
+    from proven_reason.cli import main
+    rc = main(["verify", "return (x + x);", "--reference", "return x * 2;"])
+    outp = capsys.readouterr().out
+    assert rc == 0 and "PASS" in outp

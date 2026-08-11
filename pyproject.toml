@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "proven-reason"
-version = "0.3.0"
+version = "0.4.0"
 description = "A bolt-on that tells you when your code is wrong — by running all 4,294,967,296 int32 inputs through it"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -14,6 +14,9 @@ keywords = ["program-synthesis", "reasoning", "formal-verification", "exhaustive
 
 [tool.setuptools.packages.find]
 include = ["proven_reason*"]
+
+[project.scripts]
+proven-reason = "proven_reason.cli:main"
 
 [project.urls]
 Source = "https://github.com/devkancheti4-design/proven-reason"
