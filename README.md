@@ -382,6 +382,13 @@ Running these benchmarks surfaced two real defects — the kind only use finds:
    outgrow RAM while being built; the OS killed six searches mid-level.
    Now `max_nodes` — crossing it is a reported abstention, not a crash.
 
+## For students
+
+Free, offline, no key — see [STUDENTS.md](STUDENTS.md): five guided
+exercises built from real transcripts, and the launch test — nine homework
+questions through a fused free 7B, **9/9 shipped safe, 0 wrong shipped, by
+construction**.
+
 ## Licence
 
 **Apache License 2.0** — see [LICENSE](LICENSE) and [NOTICE](NOTICE).
