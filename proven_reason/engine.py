@@ -144,6 +144,7 @@ def synthesize(examples: Sequence[Tuple[int, int]],
                holdout: Sequence[Tuple[int, int]] = (),
                grammar: Grammar = DEFAULT_GRAMMAR,
                max_size: int = 3,
+               max_nodes: int = 4_000_000,
                on_level=None) -> Authored:
     """Author the smallest expression in `x` reproducing every example.
 
@@ -158,6 +159,14 @@ def synthesize(examples: Sequence[Tuple[int, int]],
     stream is the diagnosis when it abstains: the level counts show the space
     and its growth, so you can see whether raising `max_size` is worth it or
     whether the material is what ran out.
+
+    `max_nodes` bounds the search's MEMORY, checked as nodes are added — not
+    between levels, because a collision-free level can grow past any budget
+    WHILE being built and the OS kills the process before a between-levels
+    check can act. That defect was real here: found in live use, six searches
+    OOM-killed mid-level on sealed targets. Crossing the bound returns an
+    abstention whose note says the resource ran out — a defined outcome, not
+    a crash. ~4M nodes is roughly 6 GB; size it to your machine.
     """
     xs = [a for a, _ in examples]
     want = tuple(s32(b) for _, b in examples)
@@ -168,9 +177,14 @@ def synthesize(examples: Sequence[Tuple[int, int]],
     levels: List[List[_Node]] = [[]]
     counts: List[int] = []
 
+    class _Bound(Exception):
+        pass
+
     def add(vals, expr, size, bucket) -> bool:
         if vals in seen:
             return False
+        if len(seen) >= max_nodes:
+            raise _Bound()
         seen.add(vals)
         bucket.append(_Node(vals, expr, size))
         return True
@@ -198,6 +212,24 @@ def synthesize(examples: Sequence[Tuple[int, int]],
             return Authored(True, n.expr, 0, 0, True,
                             "already on the shelf, or a constant")
 
+    evals = 0
+    try:
+        return _ladder(examples, want, grammar, max_size, levels, counts,
+                       seen, add, ok, on_level)
+    except _Bound:
+        return Authored(
+            False, evaluations=-1, levels=tuple(counts),
+            note=("resource bound: the search reached max_nodes=%s while "
+                  "building level %d — the space is larger than the memory "
+                  "envelope, not proven empty. Raise max_nodes, or declare "
+                  "more material so the answer is reachable at a smaller "
+                  "size. Levels completed: %s."
+                  % ("{:,}".format(max_nodes), len(counts) + 1,
+                     " ".join(str(c) for c in counts) or "none")))
+
+
+def _ladder(examples, want, grammar, max_size, levels, counts, seen, add,
+            ok, on_level):
     evals = 0
     for s in range(1, max_size + 1):
         new: List[_Node] = []

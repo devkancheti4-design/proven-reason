@@ -1,0 +1,149 @@
+[
+ {
+  "task": 1,
+  "fable5": "WRONG",
+  "fable5_bad": 4291459246,
+  "reasoner": "PROVEN",
+  "reasoner_expr": "(x & (x * x))"
+ },
+ {
+  "task": 4,
+  "fable5": "PROVEN",
+  "fable5_bad": 0,
+  "reasoner": "PROVEN",
+  "reasoner_expr": "(x + (x * (16 * -128)))"
+ },
+ {
+  "task": 5,
+  "fable5": "PROVEN",
+  "fable5_bad": 0,
+  "reasoner": "PROVEN",
+  "reasoner_expr": "((x << 1) + (x & 31))"
+ },
+ {
+  "task": 7,
+  "fable5": "PROVEN",
+  "fable5_bad": 0,
+  "reasoner": "PROVEN",
+  "reasoner_expr": "(x + ((x - 16) << 16))"
+ },
+ {
+  "task": 9,
+  "fable5": "PROVEN",
+  "fable5_bad": 0,
+  "reasoner": "PROVEN",
+  "reasoner_expr": "((x >> 1) >> 1)"
+ },
+ {
+  "task": 10,
+  "fable5": "WRONG",
+  "fable5_bad": 4294957312,
+  "reasoner": "PROVEN",
+  "reasoner_expr": "(x ^ (2 * (x - ((x - (x & (x - 1)))))))"
+ },
+ {
+  "task": 11,
+  "fable5": "PROVEN",
+  "fable5_bad": 0,
+  "reasoner": "PROVEN",
+  "reasoner_expr": "(15 * (x << 1))"
+ },
+ {
+  "task": 14,
+  "fable5": "WRONG",
+  "fable5_bad": 4281742588,
+  "reasoner": "PROVEN",
+  "reasoner_expr": "(x ^ (x + (x << 5)))"
+ },
+ {
+  "task": 15,
+  "fable5": "PROVEN",
+  "fable5_bad": 0,
+  "reasoner": "PROVEN",
+  "reasoner_expr": "(x | (x * 16))"
+ },
+ {
+  "task": 16,
+  "fable5": "PROVEN",
+  "fable5_bad": 0,
+  "reasoner": "PROVEN",
+  "reasoner_expr": "((x << 1) << 16)"
+ },
+ {
+  "task": 17,
+  "fable5": "WRONG",
+  "fable5_bad": 4294966272,
+  "reasoner": "PROVEN",
+  "reasoner_expr": "((((((((x >> 1) >> 1)) >> 1) >> 1)) ^ (x & 255)) << 2)"
+ },
+ {
+  "task": 18,
+  "fable5": "PROVEN",
+  "fable5_bad": 0,
+  "reasoner": "PROVEN",
+  "reasoner_expr": "(x ^ ((x >> 1) >> 1))"
+ },
+ {
+  "task": 19,
+  "fable5": "WRONG",
+  "fable5_bad": 1610612736,
+  "reasoner": "PROVEN",
+  "reasoner_expr": "(x | (1 + ((x >> 1) >> 1)))"
+ },
+ {
+  "task": 2,
+  "fable5": "NOT-GRADED",
+  "fable5_bad": null,
+  "reasoner": "ABSTAIN(mem)",
+  "reasoner_expr": null,
+  "note": "level-3 unbuildable within the 4GB envelope; closed as resource abstention, nothing shipped"
+ },
+ {
+  "task": 3,
+  "fable5": "NOT-GRADED",
+  "fable5_bad": null,
+  "reasoner": "ABSTAIN(mem)",
+  "reasoner_expr": null,
+  "note": "level-3 unbuildable within the 4GB envelope; closed as resource abstention, nothing shipped"
+ },
+ {
+  "task": 6,
+  "fable5": "NOT-GRADED",
+  "fable5_bad": null,
+  "reasoner": "ABSTAIN(mem)",
+  "reasoner_expr": null,
+  "note": "level-3 unbuildable within the 4GB envelope; closed as resource abstention, nothing shipped"
+ },
+ {
+  "task": 8,
+  "fable5": "NOT-GRADED",
+  "fable5_bad": null,
+  "reasoner": "ABSTAIN(mem)",
+  "reasoner_expr": null,
+  "note": "level-3 unbuildable within the 4GB envelope; closed as resource abstention, nothing shipped"
+ },
+ {
+  "task": 12,
+  "fable5": "NOT-GRADED",
+  "fable5_bad": null,
+  "reasoner": "ABSTAIN(mem)",
+  "reasoner_expr": null,
+  "note": "level-3 unbuildable within the 4GB envelope; closed as resource abstention, nothing shipped"
+ },
+ {
+  "task": 13,
+  "fable5": "NOT-GRADED",
+  "fable5_bad": null,
+  "reasoner": "ABSTAIN(mem)",
+  "reasoner_expr": null,
+  "note": "level-3 unbuildable within the 4GB envelope; closed as resource abstention, nothing shipped"
+ },
+ {
+  "task": 20,
+  "fable5": "NOT-GRADED",
+  "fable5_bad": null,
+  "reasoner": "ABSTAIN(mem)",
+  "reasoner_expr": null,
+  "note": "level-3 unbuildable within the 4GB envelope; closed as resource abstention, nothing shipped"
+ }
+]

@@ -16,15 +16,44 @@ print(v)          # PROVEN — agrees on every one of 4,294,967,296 int32 inputs
 Bolt it onto any code generator and it becomes a gate:
 
 ```python
-from proven_reason import gate
+from proven_reason import Reasoner
 
-g = gate(model_wrote, reference)
+rz = Reasoner()
+g = rz.gate(model_wrote, reference)
 g.outcome         # 'PASS' | 'FIX' | 'REFUSE'
 g.code            # what is safe to ship, or None
 ```
 
-Measured on ten tasks, four free local models, one laptop:
-**21 wrong answers between them. Zero after the gate. No model got worse.**
+**Every branch point in that loop evaluates an authored expression** shipped
+in `catalog/decisions.json` — TRUST (measured rule: zero tolerance), STOP
+(no real target ever landed past rung 3), MATERIAL (the fix is material,
+never depth — the authored expression is literally `1`), and a judge that
+predicts whether a repair will hold. None of the thresholds are hand-picked
+constants; each was authored from measured data, and the provenance ships
+beside the expression.
+
+Measured across two batteries, four free local models, one laptop: **41
+wrong answers between them raw. Zero shipped after the gate.** 27 repaired
+with proofs, the rest refused. The judge's live record on repairs: 13 of 13
+HOLD calls held, zero dangerous errors.
+
+### The sealed duel
+
+Twenty secret functions sampled from the engine's own grammar, no names, no
+idioms — the same 20 pairs to this package and to a frontier model (Claude
+Fable 5), whose answers were frozen before grading. Every answer swept over
+all 4,294,967,296 inputs ([benchmarks/sealed-duel](benchmarks/sealed-duel)):
+
+|  | PROVEN | WRONG | ABSTAIN |
+|---|---:|---:|---:|
+| frontier model (ships everything) | 8 | **5** | — |
+| **this package's engine** | **13** | **0** | 7 |
+
+On the 13 fully-graded tasks the engine went 13-for-13 and the frontier
+model shipped five boundary-broken answers it could not tell from its
+correct ones. Head-to-head: 5 wins, 8 ties, 0 losses. The seven abstentions
+shipped nothing — and the frontier model's answers there remain unknown,
+not victories.
 
 ---
 
@@ -294,6 +323,17 @@ one whose **silence means something**.
 
 See [ATTRIBUTION.md](ATTRIBUTION.md) for who did what, every measurement, and
 all 34 faults — which belong to the supplier, not the engine.
+
+## Found by adversarial use, fixed in 0.3.0
+
+Running these benchmarks surfaced two real defects — the kind only use finds:
+
+1. **`check()` had no timeout.** A candidate with a non-terminating loop
+   hung the caller forever (measured: 57 minutes). Now `NON-TERMINATING` —
+   never a proof, never a pass.
+2. **`synthesize()` had no memory bound.** A collision-free level can
+   outgrow RAM while being built; the OS killed six searches mid-level.
+   Now `max_nodes` — crossing it is a reported abstention, not a crash.
 
 ## Licence
 

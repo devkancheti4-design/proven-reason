@@ -300,7 +300,7 @@ def test_the_core_is_not_in_this_package():
     pkg = os.path.join(ROOT, "proven_reason")
     files = sorted(f for f in os.listdir(pkg) if f.endswith(".py"))
     assert files == ["__init__.py", "catalog.py", "engine.py", "evaluator.py",
-                     "sweep.py", "wide.py"], files
+                     "reasoner.py", "sweep.py", "wide.py"], files
     forbidden = ["sphere_synthesize", "Organism", "seed_for_window",
                  "window_for_seed", "window_sd", "first_seed", "collatz",
                  "Collatz"]
@@ -374,3 +374,78 @@ def test_holdout_rejects_rather_than_caveats():
 def test_public_api_is_present():
     for name in ("check", "gate", "reason", "catalog", "receipt", "evaluate"):
         assert hasattr(P, name), "missing %s" % name
+
+
+# =====================================================================
+# THE DEFECTS FOUND BY ADVERSARIAL USE. Each stays fixed or the build
+# fails: a harness that can hang forever or die mid-search silently is
+# not a harness anyone should trust.
+# =====================================================================
+@needs_cc
+def test_check_cannot_hang_on_a_non_terminating_candidate():
+    """57 measured minutes of hang before this existed."""
+    v = P.check("int p=0; while(x){p^=x&1; x>>=1;} return p;",
+                "return x & 1;", timeout=4)
+    assert v.verdict == "NON-TERMINATING"
+    assert not v.proven
+    assert "NOT a proof" in str(v)
+
+
+def test_synthesize_abstains_at_the_memory_bound_instead_of_dying():
+    """Six searches OOM-killed mid-level before this existed."""
+    a = P.synthesize([(0, 7), (1, 91), (2, -13), (3, 55)],
+                     max_size=3, max_nodes=3000)
+    assert not a.found
+    assert "resource bound" in a.note
+    assert "max_nodes" in a.note
+
+
+# =====================================================================
+# THE REASONER. Authored decisions ship as data; the loop has exactly
+# three outcomes and the compiler always has the last word.
+# =====================================================================
+def test_decisions_ship_and_are_well_formed():
+    from proven_reason import decisions
+    d = decisions()
+    for name in ("TRUST", "STOP", "ORDER", "MATERIAL",
+                 "G_STABLE", "G_SIZE", "G_N", "G_COST", "COMBINE"):
+        assert name in d, "missing authored decision %s" % name
+        assert P.evaluate(d[name]["expr"], 0) is not None, name
+
+
+def test_authored_trust_is_zero_tolerance():
+    from proven_reason import decisions
+    e = decisions()["TRUST"]["expr"]
+    assert P.evaluate(e, 0) == 0, "clean sweep must pass"
+    for bits in (1, 2, 8, 16, 31):
+        assert P.evaluate(e, bits) == 1, "any mismatch must refuse"
+
+
+def test_authored_stop_matches_its_provenance():
+    """Authored from 25 instructions' landing rungs: none past 3."""
+    from proven_reason import decisions
+    e = decisions()["STOP"]["expr"]
+    for rung in (1, 2, 3):
+        assert P.evaluate(e, rung) == 1
+    for rung in (4, 5, 8):
+        assert P.evaluate(e, rung) == 0
+
+
+@needs_cc
+@slow
+def test_reasoner_gate_has_no_unsafe_outcome():
+    from proven_reason import Reasoner
+    rz = Reasoner()
+    cases = [
+        ("return (x + 15) & ~15;", "return (x + 15) & ~15;"),   # PASS
+        ("return x & 255;",
+         "return x < 0 ? 0 : (x > 255 ? 255 : x);"),            # FIX (shelf)
+    ]
+    for cand, ref in cases:
+        g = rz.gate(cand, ref)
+        assert g.outcome in ("PASS", "FIX", "REFUSE")
+        if g.outcome == "REFUSE":
+            assert g.code is None
+        else:
+            assert P.check(g.code, ref).proven, (
+                "the reasoner shipped %r and it is NOT proven" % g.code)

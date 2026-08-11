@@ -1,0 +1,842 @@
+[
+ {
+  "cat": "A",
+  "ticket": "round x up to the next multiple of 16",
+  "source": "fable5",
+  "raw": "PROVEN",
+  "raw_bad": 0,
+  "gated": "RAW-OK",
+  "note": "ungated frontier"
+ },
+ {
+  "cat": "A",
+  "ticket": "round x up to the next multiple of 16",
+  "source": "opus5",
+  "raw": "PROVEN",
+  "raw_bad": 0,
+  "gated": "RAW-OK",
+  "note": "ungated frontier"
+ },
+ {
+  "cat": "A",
+  "ticket": "round x up to the next multiple of 16",
+  "source": "qwen2.5-coder:7b",
+  "raw": "PROVEN",
+  "raw_bad": 0,
+  "gated": "PASS",
+  "note": "TRUST passed it"
+ },
+ {
+  "cat": "A",
+  "ticket": "round x up to the next multiple of 16",
+  "source": "deepseek-coder:6.7b",
+  "raw": "PROVEN",
+  "raw_bad": 0,
+  "gated": "PASS",
+  "note": "TRUST passed it"
+ },
+ {
+  "cat": "A",
+  "ticket": "round x up to the next multiple of 16",
+  "source": "llama3:8b",
+  "raw": "WRONG",
+  "raw_bad": 2013265920,
+  "gated": "FIX",
+  "note": "authored+proven, 8,226 evals; judge said HOLD"
+ },
+ {
+  "cat": "A",
+  "ticket": "round x up to the next multiple of 16",
+  "source": "mistral:latest",
+  "raw": "WRONG",
+  "raw_bad": 4294967296,
+  "gated": "FIX",
+  "note": "authored+proven, 8,226 evals; judge said HOLD"
+ },
+ {
+  "cat": "A",
+  "ticket": "clamp x into an unsigned byte, 0 to 255",
+  "source": "fable5",
+  "raw": "PROVEN",
+  "raw_bad": 0,
+  "gated": "RAW-OK",
+  "note": "ungated frontier"
+ },
+ {
+  "cat": "A",
+  "ticket": "clamp x into an unsigned byte, 0 to 255",
+  "source": "opus5",
+  "raw": "PROVEN",
+  "raw_bad": 0,
+  "gated": "RAW-OK",
+  "note": "ungated frontier"
+ },
+ {
+  "cat": "A",
+  "ticket": "clamp x into an unsigned byte, 0 to 255",
+  "source": "qwen2.5-coder:7b",
+  "raw": "PROVEN",
+  "raw_bad": 0,
+  "gated": "PASS",
+  "note": "TRUST passed it"
+ },
+ {
+  "cat": "A",
+  "ticket": "clamp x into an unsigned byte, 0 to 255",
+  "source": "deepseek-coder:6.7b",
+  "raw": "PROVEN",
+  "raw_bad": 0,
+  "gated": "PASS",
+  "note": "TRUST passed it"
+ },
+ {
+  "cat": "A",
+  "ticket": "clamp x into an unsigned byte, 0 to 255",
+  "source": "llama3:8b",
+  "raw": "NO-COMPILE",
+  "raw_bad": -1,
+  "gated": "FIX",
+  "note": "authored+proven, 54 evals; judge said HOLD"
+ },
+ {
+  "cat": "A",
+  "ticket": "clamp x into an unsigned byte, 0 to 255",
+  "source": "mistral:latest",
+  "raw": "PROVEN",
+  "raw_bad": 0,
+  "gated": "PASS",
+  "note": "TRUST passed it"
+ },
+ {
+  "cat": "A",
+  "ticket": "clamp x into a signed byte, -128 to 127",
+  "source": "fable5",
+  "raw": "PROVEN",
+  "raw_bad": 0,
+  "gated": "RAW-OK",
+  "note": "ungated frontier"
+ },
+ {
+  "cat": "A",
+  "ticket": "clamp x into a signed byte, -128 to 127",
+  "source": "opus5",
+  "raw": "PROVEN",
+  "raw_bad": 0,
+  "gated": "RAW-OK",
+  "note": "ungated frontier"
+ },
+ {
+  "cat": "A",
+  "ticket": "clamp x into a signed byte, -128 to 127",
+  "source": "qwen2.5-coder:7b",
+  "raw": "PROVEN",
+  "raw_bad": 0,
+  "gated": "PASS",
+  "note": "TRUST passed it"
+ },
+ {
+  "cat": "A",
+  "ticket": "clamp x into a signed byte, -128 to 127",
+  "source": "deepseek-coder:6.7b",
+  "raw": "PROVEN",
+  "raw_bad": 0,
+  "gated": "PASS",
+  "note": "TRUST passed it"
+ },
+ {
+  "cat": "A",
+  "ticket": "clamp x into a signed byte, -128 to 127",
+  "source": "llama3:8b",
+  "raw": "PROVEN",
+  "raw_bad": 0,
+  "gated": "PASS",
+  "note": "TRUST passed it"
+ },
+ {
+  "cat": "A",
+  "ticket": "clamp x into a signed byte, -128 to 127",
+  "source": "mistral:latest",
+  "raw": "PROVEN",
+  "raw_bad": 0,
+  "gated": "PASS",
+  "note": "TRUST passed it"
+ },
+ {
+  "cat": "A",
+  "ticket": "swap the four bytes of x, reversing byte order",
+  "source": "fable5",
+  "raw": "PROVEN",
+  "raw_bad": 0,
+  "gated": "RAW-OK",
+  "note": "ungated frontier"
+ },
+ {
+  "cat": "A",
+  "ticket": "swap the four bytes of x, reversing byte order",
+  "source": "opus5",
+  "raw": "PROVEN",
+  "raw_bad": 0,
+  "gated": "RAW-OK",
+  "note": "ungated frontier"
+ },
+ {
+  "cat": "A",
+  "ticket": "swap the four bytes of x, reversing byte order",
+  "source": "qwen2.5-coder:7b",
+  "raw": "PROVEN",
+  "raw_bad": 0,
+  "gated": "PASS",
+  "note": "TRUST passed it"
+ },
+ {
+  "cat": "A",
+  "ticket": "swap the four bytes of x, reversing byte order",
+  "source": "deepseek-coder:6.7b",
+  "raw": "NO-COMPILE",
+  "raw_bad": -1,
+  "gated": "REFUSE",
+  "note": "abstained; MATERIAL says declare more \u2014 none left to declare, nothing ships"
+ },
+ {
+  "cat": "A",
+  "ticket": "swap the four bytes of x, reversing byte order",
+  "source": "llama3:8b",
+  "raw": "NO-COMPILE",
+  "raw_bad": -1,
+  "gated": "REFUSE",
+  "note": "abstained; MATERIAL says declare more \u2014 none left to declare, nothing ships"
+ },
+ {
+  "cat": "A",
+  "ticket": "swap the four bytes of x, reversing byte order",
+  "source": "mistral:latest",
+  "raw": "NO-COMPILE",
+  "raw_bad": -1,
+  "gated": "REFUSE",
+  "note": "abstained; MATERIAL says declare more \u2014 none left to declare, nothing ships"
+ },
+ {
+  "cat": "A",
+  "ticket": "count how many bits of x are set",
+  "source": "fable5",
+  "raw": "PROVEN",
+  "raw_bad": 0,
+  "gated": "RAW-OK",
+  "note": "ungated frontier"
+ },
+ {
+  "cat": "A",
+  "ticket": "count how many bits of x are set",
+  "source": "opus5",
+  "raw": "PROVEN",
+  "raw_bad": 0,
+  "gated": "RAW-OK",
+  "note": "ungated frontier"
+ },
+ {
+  "cat": "A",
+  "ticket": "count how many bits of x are set",
+  "source": "qwen2.5-coder:7b",
+  "raw": "NO-COMPILE",
+  "raw_bad": -1,
+  "gated": "REFUSE",
+  "note": "abstained; MATERIAL says declare more \u2014 none left to declare, nothing ships"
+ },
+ {
+  "cat": "A",
+  "ticket": "count how many bits of x are set",
+  "source": "deepseek-coder:6.7b",
+  "raw": "NO-COMPILE",
+  "raw_bad": -1,
+  "gated": "REFUSE",
+  "note": "abstained; MATERIAL says declare more \u2014 none left to declare, nothing ships"
+ },
+ {
+  "cat": "A",
+  "ticket": "count how many bits of x are set",
+  "source": "llama3:8b",
+  "raw": "NO-COMPILE",
+  "raw_bad": -1,
+  "gated": "REFUSE",
+  "note": "abstained; MATERIAL says declare more \u2014 none left to declare, nothing ships"
+ },
+ {
+  "cat": "A",
+  "ticket": "count how many bits of x are set",
+  "source": "mistral:latest",
+  "raw": "PROVEN",
+  "raw_bad": 0,
+  "gated": "PASS",
+  "note": "TRUST passed it"
+ },
+ {
+  "cat": "A",
+  "ticket": "sign-extend the low 12 bits of x, as a decoder does",
+  "source": "fable5",
+  "raw": "PROVEN",
+  "raw_bad": 0,
+  "gated": "RAW-OK",
+  "note": "ungated frontier"
+ },
+ {
+  "cat": "A",
+  "ticket": "sign-extend the low 12 bits of x, as a decoder does",
+  "source": "opus5",
+  "raw": "PROVEN",
+  "raw_bad": 0,
+  "gated": "RAW-OK",
+  "note": "ungated frontier"
+ },
+ {
+  "cat": "A",
+  "ticket": "sign-extend the low 12 bits of x, as a decoder does",
+  "source": "qwen2.5-coder:7b",
+  "raw": "PROVEN",
+  "raw_bad": 0,
+  "gated": "PASS",
+  "note": "TRUST passed it"
+ },
+ {
+  "cat": "A",
+  "ticket": "sign-extend the low 12 bits of x, as a decoder does",
+  "source": "deepseek-coder:6.7b",
+  "raw": "PROVEN",
+  "raw_bad": 0,
+  "gated": "PASS",
+  "note": "TRUST passed it"
+ },
+ {
+  "cat": "A",
+  "ticket": "sign-extend the low 12 bits of x, as a decoder does",
+  "source": "llama3:8b",
+  "raw": "NO-COMPILE",
+  "raw_bad": -1,
+  "gated": "FIX",
+  "note": "authored+proven, 5,860 evals; judge said HOLD"
+ },
+ {
+  "cat": "A",
+  "ticket": "sign-extend the low 12 bits of x, as a decoder does",
+  "source": "mistral:latest",
+  "raw": "WRONG",
+  "raw_bad": 4294967296,
+  "gated": "FIX",
+  "note": "authored+proven, 5,860 evals; judge said HOLD"
+ },
+ {
+  "cat": "A",
+  "ticket": "divide x by 8, rounding toward negative infinity",
+  "source": "fable5",
+  "raw": "PROVEN",
+  "raw_bad": 0,
+  "gated": "RAW-OK",
+  "note": "ungated frontier"
+ },
+ {
+  "cat": "A",
+  "ticket": "divide x by 8, rounding toward negative infinity",
+  "source": "opus5",
+  "raw": "PROVEN",
+  "raw_bad": 0,
+  "gated": "RAW-OK",
+  "note": "ungated frontier"
+ },
+ {
+  "cat": "A",
+  "ticket": "divide x by 8, rounding toward negative infinity",
+  "source": "qwen2.5-coder:7b",
+  "raw": "PROVEN",
+  "raw_bad": 0,
+  "gated": "PASS",
+  "note": "TRUST passed it"
+ },
+ {
+  "cat": "A",
+  "ticket": "divide x by 8, rounding toward negative infinity",
+  "source": "deepseek-coder:6.7b",
+  "raw": "WRONG",
+  "raw_bad": 1879048192,
+  "gated": "FIX",
+  "note": "authored+proven, 2,064 evals; judge said HOLD"
+ },
+ {
+  "cat": "A",
+  "ticket": "divide x by 8, rounding toward negative infinity",
+  "source": "llama3:8b",
+  "raw": "WRONG",
+  "raw_bad": 1879048193,
+  "gated": "FIX",
+  "note": "authored+proven, 2,064 evals; judge said HOLD"
+ },
+ {
+  "cat": "A",
+  "ticket": "divide x by 8, rounding toward negative infinity",
+  "source": "mistral:latest",
+  "raw": "WRONG",
+  "raw_bad": 3758096384,
+  "gated": "FIX",
+  "note": "authored+proven, 2,064 evals; judge said HOLD"
+ },
+ {
+  "cat": "A",
+  "ticket": "rotate the bits of x left by seven places",
+  "source": "fable5",
+  "raw": "PROVEN",
+  "raw_bad": 0,
+  "gated": "RAW-OK",
+  "note": "ungated frontier"
+ },
+ {
+  "cat": "A",
+  "ticket": "rotate the bits of x left by seven places",
+  "source": "opus5",
+  "raw": "PROVEN",
+  "raw_bad": 0,
+  "gated": "RAW-OK",
+  "note": "ungated frontier"
+ },
+ {
+  "cat": "A",
+  "ticket": "rotate the bits of x left by seven places",
+  "source": "qwen2.5-coder:7b",
+  "raw": "NO-COMPILE",
+  "raw_bad": -1,
+  "gated": "FIX",
+  "note": "authored+proven, 3,805 evals; judge said HOLD"
+ },
+ {
+  "cat": "A",
+  "ticket": "rotate the bits of x left by seven places",
+  "source": "deepseek-coder:6.7b",
+  "raw": "WRONG",
+  "raw_bad": 2147483584,
+  "gated": "FIX",
+  "note": "authored+proven, 3,805 evals; judge said HOLD"
+ },
+ {
+  "cat": "A",
+  "ticket": "rotate the bits of x left by seven places",
+  "source": "llama3:8b",
+  "raw": "WRONG",
+  "raw_bad": 4278190079,
+  "gated": "FIX",
+  "note": "authored+proven, 3,805 evals; judge said HOLD"
+ },
+ {
+  "cat": "A",
+  "ticket": "rotate the bits of x left by seven places",
+  "source": "mistral:latest",
+  "raw": "WRONG",
+  "raw_bad": 2147483584,
+  "gated": "FIX",
+  "note": "authored+proven, 3,805 evals; judge said HOLD"
+ },
+ {
+  "cat": "A",
+  "ticket": "saturating increment: add one, but stop at INT_MAX",
+  "source": "fable5",
+  "raw": "PROVEN",
+  "raw_bad": 0,
+  "gated": "RAW-OK",
+  "note": "ungated frontier"
+ },
+ {
+  "cat": "A",
+  "ticket": "saturating increment: add one, but stop at INT_MAX",
+  "source": "opus5",
+  "raw": "PROVEN",
+  "raw_bad": 0,
+  "gated": "RAW-OK",
+  "note": "ungated frontier"
+ },
+ {
+  "cat": "A",
+  "ticket": "saturating increment: add one, but stop at INT_MAX",
+  "source": "qwen2.5-coder:7b",
+  "raw": "NO-COMPILE",
+  "raw_bad": -1,
+  "gated": "FIX",
+  "note": "authored+proven, 294,223 evals; judge said NO-HOLD"
+ },
+ {
+  "cat": "A",
+  "ticket": "saturating increment: add one, but stop at INT_MAX",
+  "source": "deepseek-coder:6.7b",
+  "raw": "NO-COMPILE",
+  "raw_bad": -1,
+  "gated": "FIX",
+  "note": "authored+proven, 294,223 evals; judge said NO-HOLD"
+ },
+ {
+  "cat": "A",
+  "ticket": "saturating increment: add one, but stop at INT_MAX",
+  "source": "llama3:8b",
+  "raw": "WRONG",
+  "raw_bad": 1,
+  "gated": "FIX",
+  "note": "authored+proven, 294,223 evals; judge said NO-HOLD"
+ },
+ {
+  "cat": "A",
+  "ticket": "saturating increment: add one, but stop at INT_MAX",
+  "source": "mistral:latest",
+  "raw": "NO-COMPILE",
+  "raw_bad": -1,
+  "gated": "FIX",
+  "note": "authored+proven, 294,223 evals; judge said NO-HOLD"
+ },
+ {
+  "cat": "A",
+  "ticket": "the smallest power of two that is at least x, zero for x <= 0",
+  "source": "fable5",
+  "raw": "PROVEN",
+  "raw_bad": 0,
+  "gated": "RAW-OK",
+  "note": "ungated frontier"
+ },
+ {
+  "cat": "A",
+  "ticket": "the smallest power of two that is at least x, zero for x <= 0",
+  "source": "opus5",
+  "raw": "PROVEN",
+  "raw_bad": 0,
+  "gated": "RAW-OK",
+  "note": "ungated frontier"
+ },
+ {
+  "cat": "A",
+  "ticket": "the smallest power of two that is at least x, zero for x <= 0",
+  "source": "qwen2.5-coder:7b",
+  "raw": "NO-COMPILE",
+  "raw_bad": -1,
+  "gated": "REFUSE",
+  "note": "abstained; MATERIAL says declare more \u2014 none left to declare, nothing ships"
+ },
+ {
+  "cat": "A",
+  "ticket": "the smallest power of two that is at least x, zero for x <= 0",
+  "source": "deepseek-coder:6.7b",
+  "raw": "NO-COMPILE",
+  "raw_bad": -1,
+  "gated": "REFUSE",
+  "note": "abstained; MATERIAL says declare more \u2014 none left to declare, nothing ships"
+ },
+ {
+  "cat": "A",
+  "ticket": "the smallest power of two that is at least x, zero for x <= 0",
+  "source": "llama3:8b",
+  "raw": "WRONG",
+  "raw_bad": 4294967295,
+  "gated": "REFUSE",
+  "note": "abstained; MATERIAL says declare more \u2014 none left to declare, nothing ships"
+ },
+ {
+  "cat": "A",
+  "ticket": "the smallest power of two that is at least x, zero for x <= 0",
+  "source": "mistral:latest",
+  "raw": "WRONG",
+  "raw_bad": 2147483616,
+  "gated": "REFUSE",
+  "note": "abstained; MATERIAL says declare more \u2014 none left to declare, nothing ships"
+ },
+ {
+  "cat": "A",
+  "ticket": "the integer hash mixer step: xor x with x shifted right sixteen, then multiply by 0x45d9f3b",
+  "source": "fable5",
+  "raw": "PROVEN",
+  "raw_bad": 0,
+  "gated": "RAW-OK",
+  "note": "ungated frontier"
+ },
+ {
+  "cat": "A",
+  "ticket": "the integer hash mixer step: xor x with x shifted right sixteen, then multiply by 0x45d9f3b",
+  "source": "opus5",
+  "raw": "PROVEN",
+  "raw_bad": 0,
+  "gated": "RAW-OK",
+  "note": "ungated frontier"
+ },
+ {
+  "cat": "A",
+  "ticket": "the integer hash mixer step: xor x with x shifted right sixteen, then multiply by 0x45d9f3b",
+  "source": "qwen2.5-coder:7b",
+  "raw": "WRONG",
+  "raw_bad": 2147483648,
+  "gated": "REFUSE",
+  "note": "abstained; MATERIAL says declare more \u2014 none left to declare, nothing ships"
+ },
+ {
+  "cat": "A",
+  "ticket": "the integer hash mixer step: xor x with x shifted right sixteen, then multiply by 0x45d9f3b",
+  "source": "deepseek-coder:6.7b",
+  "raw": "WRONG",
+  "raw_bad": 2147483648,
+  "gated": "REFUSE",
+  "note": "abstained; MATERIAL says declare more \u2014 none left to declare, nothing ships"
+ },
+ {
+  "cat": "A",
+  "ticket": "the integer hash mixer step: xor x with x shifted right sixteen, then multiply by 0x45d9f3b",
+  "source": "llama3:8b",
+  "raw": "WRONG",
+  "raw_bad": 2147483648,
+  "gated": "REFUSE",
+  "note": "abstained; MATERIAL says declare more \u2014 none left to declare, nothing ships"
+ },
+ {
+  "cat": "A",
+  "ticket": "the integer hash mixer step: xor x with x shifted right sixteen, then multiply by 0x45d9f3b",
+  "source": "mistral:latest",
+  "raw": "WRONG",
+  "raw_bad": 2147483648,
+  "gated": "REFUSE",
+  "note": "abstained; MATERIAL says declare more \u2014 none left to declare, nothing ships"
+ },
+ {
+  "cat": "A",
+  "ticket": "one if x is a multiple of 16, otherwise zero",
+  "source": "fable5",
+  "raw": "PROVEN",
+  "raw_bad": 0,
+  "gated": "RAW-OK",
+  "note": "ungated frontier"
+ },
+ {
+  "cat": "A",
+  "ticket": "one if x is a multiple of 16, otherwise zero",
+  "source": "opus5",
+  "raw": "PROVEN",
+  "raw_bad": 0,
+  "gated": "RAW-OK",
+  "note": "ungated frontier"
+ },
+ {
+  "cat": "A",
+  "ticket": "one if x is a multiple of 16, otherwise zero",
+  "source": "qwen2.5-coder:7b",
+  "raw": "PROVEN",
+  "raw_bad": 0,
+  "gated": "PASS",
+  "note": "TRUST passed it"
+ },
+ {
+  "cat": "A",
+  "ticket": "one if x is a multiple of 16, otherwise zero",
+  "source": "deepseek-coder:6.7b",
+  "raw": "PROVEN",
+  "raw_bad": 0,
+  "gated": "PASS",
+  "note": "TRUST passed it"
+ },
+ {
+  "cat": "A",
+  "ticket": "one if x is a multiple of 16, otherwise zero",
+  "source": "llama3:8b",
+  "raw": "PROVEN",
+  "raw_bad": 0,
+  "gated": "PASS",
+  "note": "TRUST passed it"
+ },
+ {
+  "cat": "A",
+  "ticket": "one if x is a multiple of 16, otherwise zero",
+  "source": "mistral:latest",
+  "raw": "NO-COMPILE",
+  "raw_bad": -1,
+  "gated": "FIX",
+  "note": "authored+proven, 2,240 evals; judge said HOLD"
+ },
+ {
+  "cat": "B",
+  "ticket": "add two 64-bit values, returning the low 64 bits, wrapping",
+  "source": "fable5",
+  "raw": "TESTED",
+  "bad": 0,
+  "gated": "RAW-OK"
+ },
+ {
+  "cat": "B",
+  "ticket": "add two 64-bit values, returning the low 64 bits, wrapping",
+  "source": "opus5",
+  "raw": "TESTED",
+  "bad": 0,
+  "gated": "RAW-OK"
+ },
+ {
+  "cat": "B",
+  "ticket": "add two 64-bit values, returning the low 64 bits, wrapping",
+  "source": "qwen2.5-coder:7b",
+  "raw": "TESTED",
+  "bad": 0,
+  "gated": "PASS"
+ },
+ {
+  "cat": "B",
+  "ticket": "add two 64-bit values, returning the low 64 bits, wrapping",
+  "source": "deepseek-coder:6.7b",
+  "raw": "TESTED",
+  "bad": 0,
+  "gated": "PASS"
+ },
+ {
+  "cat": "B",
+  "ticket": "add two 64-bit values, returning the low 64 bits, wrapping",
+  "source": "llama3:8b",
+  "raw": "NO-COMPILE",
+  "bad": -1,
+  "gated": "FIX(lanes)"
+ },
+ {
+  "cat": "B",
+  "ticket": "add two 64-bit values, returning the low 64 bits, wrapping",
+  "source": "mistral:latest",
+  "raw": "NO-COMPILE",
+  "bad": -1,
+  "gated": "FIX(lanes)"
+ },
+ {
+  "cat": "B",
+  "ticket": "compare two 64-bit values as UNSIGNED, returning -1, 0 or 1",
+  "source": "fable5",
+  "raw": "TESTED",
+  "bad": 0,
+  "gated": "RAW-OK"
+ },
+ {
+  "cat": "B",
+  "ticket": "compare two 64-bit values as UNSIGNED, returning -1, 0 or 1",
+  "source": "opus5",
+  "raw": "TESTED",
+  "bad": 0,
+  "gated": "RAW-OK"
+ },
+ {
+  "cat": "B",
+  "ticket": "compare two 64-bit values as UNSIGNED, returning -1, 0 or 1",
+  "source": "qwen2.5-coder:7b",
+  "raw": "WRONG",
+  "bad": 1001005,
+  "gated": "FIX(lanes)"
+ },
+ {
+  "cat": "B",
+  "ticket": "compare two 64-bit values as UNSIGNED, returning -1, 0 or 1",
+  "source": "deepseek-coder:6.7b",
+  "raw": "WRONG",
+  "bad": 1001005,
+  "gated": "FIX(lanes)"
+ },
+ {
+  "cat": "B",
+  "ticket": "compare two 64-bit values as UNSIGNED, returning -1, 0 or 1",
+  "source": "llama3:8b",
+  "raw": "WRONG",
+  "bad": 1001005,
+  "gated": "FIX(lanes)"
+ },
+ {
+  "cat": "B",
+  "ticket": "compare two 64-bit values as UNSIGNED, returning -1, 0 or 1",
+  "source": "mistral:latest",
+  "raw": "WRONG",
+  "bad": 1001005,
+  "gated": "FIX(lanes)"
+ },
+ {
+  "cat": "B",
+  "ticket": "subtract b from a as 64-bit, returning the low 64 bits, wrapping",
+  "source": "fable5",
+  "raw": "TESTED",
+  "bad": 0,
+  "gated": "RAW-OK"
+ },
+ {
+  "cat": "B",
+  "ticket": "subtract b from a as 64-bit, returning the low 64 bits, wrapping",
+  "source": "opus5",
+  "raw": "TESTED",
+  "bad": 0,
+  "gated": "RAW-OK"
+ },
+ {
+  "cat": "B",
+  "ticket": "subtract b from a as 64-bit, returning the low 64 bits, wrapping",
+  "source": "qwen2.5-coder:7b",
+  "raw": "TESTED",
+  "bad": 0,
+  "gated": "PASS"
+ },
+ {
+  "cat": "B",
+  "ticket": "subtract b from a as 64-bit, returning the low 64 bits, wrapping",
+  "source": "deepseek-coder:6.7b",
+  "raw": "TESTED",
+  "bad": 0,
+  "gated": "PASS"
+ },
+ {
+  "cat": "B",
+  "ticket": "subtract b from a as 64-bit, returning the low 64 bits, wrapping",
+  "source": "llama3:8b",
+  "raw": "TESTED",
+  "bad": 0,
+  "gated": "PASS"
+ },
+ {
+  "cat": "B",
+  "ticket": "subtract b from a as 64-bit, returning the low 64 bits, wrapping",
+  "source": "mistral:latest",
+  "raw": "TESTED",
+  "bad": 0,
+  "gated": "PASS"
+ },
+ {
+  "cat": "B",
+  "ticket": "the carry out of adding two 64-bit values as unsigned, 0 or 1",
+  "source": "fable5",
+  "raw": "TESTED",
+  "bad": 0,
+  "gated": "RAW-OK"
+ },
+ {
+  "cat": "B",
+  "ticket": "the carry out of adding two 64-bit values as unsigned, 0 or 1",
+  "source": "opus5",
+  "raw": "TESTED",
+  "bad": 0,
+  "gated": "RAW-OK"
+ },
+ {
+  "cat": "B",
+  "ticket": "the carry out of adding two 64-bit values as unsigned, 0 or 1",
+  "source": "qwen2.5-coder:7b",
+  "raw": "WRONG",
+  "bad": 999925,
+  "gated": "FIX(lanes)"
+ },
+ {
+  "cat": "B",
+  "ticket": "the carry out of adding two 64-bit values as unsigned, 0 or 1",
+  "source": "deepseek-coder:6.7b",
+  "raw": "NO-COMPILE",
+  "bad": -1,
+  "gated": "FIX(lanes)"
+ },
+ {
+  "cat": "B",
+  "ticket": "the carry out of adding two 64-bit values as unsigned, 0 or 1",
+  "source": "llama3:8b",
+  "raw": "NO-COMPILE",
+  "bad": -1,
+  "gated": "FIX(lanes)"
+ },
+ {
+  "cat": "B",
+  "ticket": "the carry out of adding two 64-bit values as unsigned, 0 or 1",
+  "source": "mistral:latest",
+  "raw": "WRONG",
+  "bad": 1125850,
+  "gated": "FIX(lanes)"
+ }
+]
