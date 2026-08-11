@@ -339,5 +339,16 @@
   "evals": 424,
   "sweep_secs": null,
   "dict_before": 31
+ },
+ {
+  "name": "SATINC",
+  "meaning": "saturating increment, stops at INT_MAX",
+  "expr": "((x + (((0 - (((x + 1) - 1) >> 31)) + (((x + 1) + ((x + 1) >> 31)) >> 31)))) - ((x - (x | 2147483647)) >> 31))",
+  "ref": "return x == 2147483647 ? 2147483647 : x + 1;",
+  "verdict": "PROVEN",
+  "size": 3,
+  "evals": 147673,
+  "sweep_secs": 10.5,
+  "dict_before": 31
  }
 ]

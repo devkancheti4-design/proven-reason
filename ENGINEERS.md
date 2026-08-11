@@ -59,6 +59,22 @@ saturating increment was wrong; the gate shipped **silence** instead. The
 frontier models earned their 6/6, but note who graded them: this package.
 Ungated, their zero is unattested; gated, everyone's zero is structural.
 
+**Postscript — whose fault was the REFUSE, and how it died.** Three-way
+split: the model wrote the wrong answer (always the first fault); the shelf
+lacked `SATINC` (stock); and the engine declares material as leaves, not
+composable operators (a deliberate simplicity trade, documented here).
+The fix took one authoring session: `SATINC` was authored in 147,673
+evaluations, PROVEN by the sweep in 10.5s, and shipped as catalog
+instruction 32. The same task now ends:
+
+```
+rejected (wrong on 1 inputs, first at x=2147483647);
+PROVEN shelf rule SATINC ships instead      -> FIX
+```
+
+Wrong on ONE input in 4,294,967,296 — caught, named, repaired. REFUSE
+rates are a stock level, not a ceiling.
+
 And when frontier models face questions their training has no idiom for,
 the picture inverts — see [benchmarks/sealed-duel](benchmarks/sealed-duel):
 on twenty sealed grammar-sampled functions, **the engine went 13 PROVEN /

@@ -514,3 +514,12 @@ def test_frontier_and_api_adapters_construct_and_refuse_without_keys():
             a("hello")
     o = OpenAICompat("gpt-4o", base_url="http://localhost:9")
     assert o.base.endswith(":9") and o.model == "gpt-4o"
+
+
+
+def test_satinc_is_shelved_and_fits_the_saturating_increment():
+    """The engineer-test REFUSE, converted: instruction 32."""
+    assert P.find("SATINC") is not None
+    pairs = [(x, 2147483647 if x == 2147483647 else P.s32(x + 1))
+             for x in (-2147483648, -1, 0, 1, 2147483646, 2147483647)]
+    assert any(i.name == "SATINC" for i in P.fits(pairs))
