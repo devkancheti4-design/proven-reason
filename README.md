@@ -238,6 +238,18 @@ FIX
   ships: return (x & 1);
 ```
 
+### 64-bit too
+
+```bash
+proven-reason verify64 "return a + b;" \
+    --reference "return (long long)((unsigned long long)a + (unsigned long long)b);"
+```
+
+At 64 bits the strongest honest word is **TESTED** (4,000,169 edge-heavy
+pairs — 2¹²⁸ cannot be swept), and a wrong candidate is repaired with the
+lane composition whose four 16-bit lanes are each **PROVEN** over their own
+2³². The verdict string always says which word it earned.
+
 ### Fuse ANY model — three lines
 
 ```python

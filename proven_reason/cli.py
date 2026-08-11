@@ -44,10 +44,27 @@ def main(argv=None) -> int:
     au.add_argument("--reference", required=True)
     au.add_argument("--max-size", type=int, default=3)
 
+    v64 = sub.add_parser("verify64",
+                         help="gate a 64-bit `long long f(long long a, long "
+                              "long b)` body — suite-TESTED, lane-repaired")
+    v64.add_argument("candidate")
+    v64.add_argument("--reference", required=True)
+
     ns = ap.parse_args(argv)
 
     from .reasoner import Reasoner
     rz = Reasoner()
+
+    if ns.cmd == "verify64":
+        from .reasoner import gate64
+        out = gate64(ns.candidate, ns.reference)
+        print(out.outcome)
+        print("  " + out.note)
+        if out.code:
+            print("  ships: %s" % (out.code[:120] + ("..." if
+                                                     len(out.code) > 120
+                                                     else "")))
+        return 0 if out.safe else 1
 
     if ns.cmd == "ask":
         from .models import Ollama, fuse

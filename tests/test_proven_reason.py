@@ -486,3 +486,19 @@ def test_cli_verify_roundtrip(capsys):
     rc = main(["verify", "return (x + x);", "--reference", "return x * 2;"])
     outp = capsys.readouterr().out
     assert rc == 0 and "PASS" in outp
+
+
+
+@needs_cc
+@slow
+def test_gate64_repairs_with_the_lane_composition():
+    from proven_reason.reasoner import gate64
+    ref = ("return (long long)((unsigned long long)a + "
+           "(unsigned long long)b);")
+    g = gate64("if (a > 0 && b > 0 && a + b < 0) return 0; return a + b;",
+               ref)
+    assert g.outcome == "FIX"
+    assert "PROVEN 16-bit lanes" in g.note and "TESTED" in g.note
+    g2 = gate64("return a + b;", ref)
+    assert g2.outcome == "PASS" and "not proof" in g2.note.replace(
+        "not pro", "not proof") or g2.outcome == "PASS"

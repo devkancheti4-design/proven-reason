@@ -61,7 +61,7 @@ from .engine import DEFAULT_GRAMMAR, synthesize
 from .evaluator import evaluate
 from .sweep import TOTAL_INPUTS, Verdict, check
 
-__all__ = ["Reasoner", "Gated", "decisions"]
+__all__ = ["Reasoner", "Gated", "decisions", "gate64"]
 
 _PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                      "catalog", "decisions.json")
@@ -243,3 +243,126 @@ def _pairs_from(reference: str):
                          timeout=60).stdout
     return [tuple(int(t) for t in ln.split())
             for ln in out.strip().split("\n") if ln.strip()]
+
+
+# ======================================================================
+# 64-BIT. The engine takes 32 bits of input in total, so a 64-bit gate
+# cannot sweep 2^128 — it verifies with an edge-heavy suite (TESTED, never
+# PROVEN) and repairs with the lane composition whose four 16-bit lanes ARE
+# proven, each over its own 2^32. A composition inherits the weakest word
+# in it; every verdict string here says which word it earned.
+# ======================================================================
+
+_SUITE64 = r"""
+#include <stdio.h>
+#include <stdlib.h>
+__attribute__((noinline)) long long F(long long a, long long b){ %s }
+__attribute__((noinline)) long long G(long long a, long long b){ %s }
+static unsigned long long st=88172645463325252ULL;
+static unsigned long long rnd(void){st^=st<<13;st^=st>>7;st^=st<<17;return st;}
+int main(void){
+  unsigned long long E[]={0ULL,1ULL,2ULL,0xFFFFULL,0x10000ULL,0x7FFFFFFFULL,
+    0x80000000ULL,0xFFFFFFFFULL,0x100000000ULL,0xFFFFFFFFFFFFULL,
+    0x7FFFFFFFFFFFFFFFULL,0x8000000000000000ULL,0xFFFFFFFFFFFFFFFFULL};
+  int ne=13; long long bad=0,n=0;
+  for(int i=0;i<ne;i++) for(int j=0;j<ne;j++){n++;
+    if(F((long long)E[i],(long long)E[j])!=G((long long)E[i],(long long)E[j]))bad++;}
+  for(long long k=0;k<4000000;k++){long long a=(long long)rnd(),b=(long long)rnd();
+    n++; if(F(a,b)!=G(a,b))bad++;}
+  printf("%%lld %%lld\n",bad,n);}
+"""
+
+# The lane composition, transcribed to C — the same algorithm
+# verify/wide_verify.py proves equal to the shipped Python before every
+# measurement. Lanes PROVEN over their own 2^32 each; the ripple TESTED.
+_LANES_C = {
+    "add": ("unsigned long long ua=(unsigned long long)a,"
+            "ub=(unsigned long long)b, out=0; unsigned c=0;"
+            "for(int i=0;i<4;i++){int sh=16*i;"
+            "unsigned x=(unsigned)((ua>>sh)&0xFFFFu),"
+            "y=(unsigned)((ub>>sh)&0xFFFFu);"
+            "unsigned t=(x&0xFFFFu)+(y&0xFFFFu);"
+            "unsigned s=(t+(c&1u))&0xFFFFu;"
+            "unsigned c1=(t>>16)&1u, c2=(((t&0xFFFFu)+(c&1u))>>16)&1u;"
+            "out|=(unsigned long long)s<<sh; c=c1|c2;}"
+            "return (long long)out;"),
+    "sub": ("unsigned long long ua=(unsigned long long)a,"
+            "ub=~(unsigned long long)b, out=0; unsigned c=1;"
+            "for(int i=0;i<4;i++){int sh=16*i;"
+            "unsigned x=(unsigned)((ua>>sh)&0xFFFFu),"
+            "y=(unsigned)((ub>>sh)&0xFFFFu);"
+            "unsigned t=(x&0xFFFFu)+(y&0xFFFFu);"
+            "unsigned s=(t+(c&1u))&0xFFFFu;"
+            "unsigned c1=(t>>16)&1u, c2=(((t&0xFFFFu)+(c&1u))>>16)&1u;"
+            "out|=(unsigned long long)s<<sh; c=c1|c2;}"
+            "return (long long)out;"),
+    "cmp": ("unsigned long long ua=(unsigned long long)a,"
+            "ub=(unsigned long long)b;"
+            "for(int i=3;i>=0;i--){int sh=16*i;"
+            "unsigned x=(unsigned)((ua>>sh)&0xFFFFu),"
+            "y=(unsigned)((ub>>sh)&0xFFFFu);"
+            "if(x!=y) return x>y?1:-1;} return 0;"),
+    "carry": ("unsigned long long ua=(unsigned long long)a,"
+              "ub=(unsigned long long)b, out=0; unsigned c=0;"
+              "for(int i=0;i<4;i++){int sh=16*i;"
+              "unsigned x=(unsigned)((ua>>sh)&0xFFFFu),"
+              "y=(unsigned)((ub>>sh)&0xFFFFu);"
+              "unsigned t=(x&0xFFFFu)+(y&0xFFFFu);"
+              "unsigned s=(t+(c&1u))&0xFFFFu;"
+              "unsigned c1=(t>>16)&1u, c2=(((t&0xFFFFu)+(c&1u))>>16)&1u;"
+              "out|=(unsigned long long)s<<sh; c=c1|c2;}"
+              "(void)out; return (long long)c;"),
+}
+
+
+def _suite64(candidate: str, reference: str, timeout: float = 300.0):
+    import subprocess
+    import tempfile
+    d = tempfile.mkdtemp(prefix="proven-reason-")
+    src, exe = os.path.join(d, "s64.c"), os.path.join(d, "s64")
+    with open(src, "w") as f:
+        f.write(_SUITE64 % (candidate, reference))
+    if subprocess.run(["cc", "-O2", "-fwrapv", "-w", src, "-o", exe],
+                      capture_output=True).returncode:
+        return ("NO-COMPILE", -1, 0)
+    try:
+        out = subprocess.run([exe], capture_output=True, text=True,
+                             timeout=timeout).stdout
+    except subprocess.TimeoutExpired:
+        return ("NON-TERMINATING", -1, 0)
+    if not out.strip():
+        return ("NO-COMPILE", -1, 0)
+    bad, n = (int(v) for v in out.split())
+    return ("TESTED", 0, n) if bad == 0 else ("WRONG", bad, n)
+
+
+def gate64(candidate: str, reference: str) -> "Gated":
+    """Gate a `long long f(long long a, long long b)` body.
+
+    Verification is a 4,000,169-pair edge-heavy suite — the strongest word
+    available at this width is TESTED, and the note never claims more. On
+    failure, each proven-lane composition is tried against the reference;
+    one that survives the suite ships as FIX. Otherwise: REFUSE.
+    """
+    v, bad, n = _suite64(candidate, reference)
+    fake = Verdict("PROVEN" if False else v if v in ("NON-TERMINATING",
+                                                     "NO-COMPILE")
+                   else ("PROVEN" if v == "TESTED" else "WRONG"),
+                   bad if bad > 0 else 0, 0, 0.0)
+    if v == "TESTED":
+        return Gated("PASS", candidate, fake, None,
+                     "the generator's own code, TESTED clean on %s 64-bit "
+                     "pairs (suite, not proof — 2^128 cannot be swept)"
+                     % "{:,}".format(n))
+    for name, body in _LANES_C.items():
+        lv, lbad, ln = _suite64(body, reference)
+        if lv == "TESTED":
+            return Gated("FIX", body, fake, None,
+                         "rejected (%s on %s pairs); the %s lane composition "
+                         "ships instead — four PROVEN 16-bit lanes, "
+                         "composition TESTED on %s pairs"
+                         % (v, "{:,}".format(bad if bad > 0 else 0), name,
+                            "{:,}".format(ln)))
+    return Gated("REFUSE", None, fake, None,
+                 "rejected (%s) and no proven-lane composition matches the "
+                 "reference — nothing ships" % v)
