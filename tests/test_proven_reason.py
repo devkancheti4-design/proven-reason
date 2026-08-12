@@ -523,3 +523,17 @@ def test_satinc_is_shelved_and_fits_the_saturating_increment():
     pairs = [(x, 2147483647 if x == 2147483647 else P.s32(x + 1))
              for x in (-2147483648, -1, 0, 1, 2147483646, 2147483647)]
     assert any(i.name == "SATINC" for i in P.fits(pairs))
+
+
+
+def test_dsa_shelf_is_stocked_and_evaluates():
+    """v0.7.0: the fold ladders hard DSA answers are made of."""
+    for name in ("SMEAR", "NEXTP2", "PARITY", "POPCNT", "BSWAP", "REVBITS",
+                 "PC8", "SHL16", "CTZ_M", "ILOG2P"):
+        ins = P.find(name)
+        assert ins is not None, "missing DSA instruction %s" % name
+    pop = P.find("POPCNT")
+    for x, want in ((0, 0), (1, 1), (255, 8), (-1, 32), (0x55555555, 16)):
+        assert pop(x) == want, "POPCNT(%d)" % x
+    rev = P.find("REVBITS")
+    assert rev(1) == -2147483648 and rev(-2147483648) == 1

@@ -209,6 +209,30 @@ The cost of an instruction fell as the shelf grew, which is the whole design.
 nothing**; with them on the shelf it landed at **424 evaluations in 0.4
 seconds** — the same target, **12,796×**.
 
+### The DSA shelf (v0.7.0)
+
+Twenty-six further instructions — the fold ladders hard DSA answers are made
+of: the or-shift cascade to `NEXTP2`, the xor folds to `PARITY`, the
+masked-add reduction to `POPCNT`, the swap ladders to `BSWAP` and `REVBITS`,
+plus `SMEAR`, `CTZ_M`, `ILOG2P`. Each authored from compiled pairs, each
+swept over all 4,294,967,296 inputs, each becoming material for the next.
+The measured lesson repeated at scale: `POPCNT` abstained for a combined
+**96 minutes** across two rounds while a rung was missing, then landed in
+**41 seconds** once `PC8` existed. Depth was never the lever; the ladder's
+26 landings all sat within the authored STOP bound (rung ≤ 3).
+
+The exam: the three tasks the gated battery REFUSED — popcount, byte swap,
+next-power-of-two — re-gated against the stocked catalog, using the models'
+original wrong answers (one of them non-terminating):
+
+```
+count how many bits of x are set        FIX — PROVEN shelf rule POPCNT
+swap the four bytes of x                FIX — PROVEN shelf rule BSWAP
+smallest power of two >= x              FIX — PROVEN shelf rule NEXTP2
+
+converted: 3 of 3 former REFUSEs now ship proven code
+```
+
 ---
 
 ## Install — three commands to a fused model
