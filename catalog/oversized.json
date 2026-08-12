@@ -1,0 +1,26 @@
+[
+ {
+  "name": "XS4B",
+  "meaning": "square the 4-fold: t xor t>>8 of XS4",
+  "ref": "int t = x ^ ((int)((unsigned)x >> 4)); return t ^ ((int)((unsigned)t >> 8));",
+  "size": 3,
+  "evals": 258010,
+  "chars": 96530
+ },
+ {
+  "name": "UNF4",
+  "meaning": "inverse of x xor x>>4",
+  "ref": "int t = x ^ ((int)((unsigned)x >> 4)); t = t ^ ((int)((unsigned)t >> 8)); return t ^ ((int)((unsigned)t >> 16));",
+  "size": 2,
+  "evals": 5682,
+  "chars": 112085
+ },
+ {
+  "name": "UNF8",
+  "meaning": "inverse of x xor x>>8",
+  "ref": "int t = x ^ ((int)((unsigned)x >> 8)); return t ^ ((int)((unsigned)t >> 16));",
+  "size": 2,
+  "evals": 5926,
+  "chars": 3764710
+ }
+]

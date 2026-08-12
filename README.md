@@ -209,6 +209,35 @@ The cost of an instruction fell as the shelf grew, which is the whole design.
 nothing**; with them on the shelf it landed at **424 evaluations in 0.4
 seconds** — the same target, **12,796×**.
 
+### The inversion rungs (v0.9.0)
+
+Five more, each re-proved over all 4,294,967,296 inputs before landing:
+`XS4`, `XS8`, `XL8`, `XL16`, `UNFL8` — the xor-shift folds and their
+unfolds, the material an inverse is built from. Catalog: **63**.
+
+**Three were authored and PROVEN but are NOT shipped, and the reason is a
+defect in this package, not in the answers.** `catalog/oversized.json`
+records them with their measurements. The engine returned them as size-2
+and size-3 expressions — two or three operations over declared material —
+but material is stored as **flattened text**, so each rung inlines the full
+text of everything beneath it and the size compounds down a ladder:
+
+```
+UNFL8   size 2          123 characters
+UNF4    size 2      112,085 characters
+UNF8    size 2    3,764,710 characters
+```
+
+All three are the same size to the engine. The difference is entirely what
+their leaves happened to be. Promoting a 3.8 MB expression to an operator —
+wrapping that text around every node of every level — exhausted memory in a
+live run before any search happened.
+
+**The fix is to store material by reference and expand once at proof time.**
+Until then the catalog holds only expressions small enough to be honest
+about, and the oversized three are recorded as measurements rather than
+shipped as blobs.
+
 ### The DSA shelf (v0.7.0)
 
 Twenty-six further instructions — the fold ladders hard DSA answers are made
