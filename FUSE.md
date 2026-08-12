@@ -193,3 +193,55 @@ with an abstention you can trust when it fails.
 layer built on proven 32-bit lanes. It will not review your web app. Within
 that domain the guarantee is total — every input, not a sample — and outside
 it the honest answer is that this is the wrong tool.
+
+---
+
+## Attach it to anything with one shell command
+
+The whole API is a subprocess. No SDK, no key, no library — which means
+Claude, GPT, Gemini and a 7B on your laptop all drive it identically.
+
+```bash
+proven-reason ask "round x up to a multiple of 32" \
+              --reference "return (x+31) & ~31;" \
+              --model qwen2.5-coder:7b
+```
+
+```
+PASS
+  the model's own code, swept clean over all 4,294,967,296 inputs
+  ships: return (x + 31) & ~31;
+```
+
+Three outcomes, and deliberately no fourth: **PASS** (the model's own code
+survived), **FIX** (it did not; the engine authored a replacement that did),
+**REFUSE** (nothing survived — nothing ships, which is a safe answer, not a
+failure).
+
+### Driving it from a frontier model
+
+An agent supplies two things per call — what it wants, and what correct
+means — and gets back code that a decider has already checked, or a refusal:
+
+```python
+import subprocess, json
+
+def proven(english: str, reference: str) -> str | None:
+    """Ask for code. Get back something proven, or None. Never a guess."""
+    r = subprocess.run(
+        ["proven-reason", "ask", english, "--reference", reference],
+        capture_output=True, text=True)
+    return r.stdout if r.returncode == 0 else None
+```
+
+**The caller supplies the reference, never the implementation.** A reference
+is a definition of correct — write it the clearest way you can, not the
+fastest. If you supply an implementation you have answered your own question
+and this has nothing to add.
+
+### Why route through it at all
+
+Because the expensive tokens are the *derivation*, and they are the ones that
+get displaced. Measured on 27 primitives against a frontier model writing
+the same library by hand: **2.7x fewer supplier tokens, and one fewer
+shipped bug** — see the head-to-head in [README.md](README.md).

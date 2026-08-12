@@ -120,7 +120,43 @@ not victories.
 
 ## What it saves
 
-Three numbers, measured, with the qualifiers attached rather than omitted.
+### Measured head-to-head: a frontier model wrote the same library by hand
+
+27 integer primitives — clamps, popcounts, sign-extends, byte swap, saturating
+add, next-power-of-two. Built twice. Once by this package driving a free local
+7B, once by Claude Opus 5 writing every line itself. **The same decider judged
+both**: a compiled sweep over all 4,294,967,296 inputs.
+
+| | supplier tokens | wrong |
+|---|---:|---:|
+| frontier model, by hand | 634 code + 597 test harness = **1,231** | **1 of 23** |
+| **this package** + a free local 7B | **450** (specs only) | **0** |
+
+**2.7x fewer supplier tokens, and one fewer bug.** Two honest caveats: 634 is
+only the *emitted code* — the reasoning that produced it is not counted, so
+2.7x is a floor rather than the true ratio; and the local model's 604 tokens
+are free, because it runs on the same laptop.
+
+The bug matters more than the ratio. Asked for `x/2` rounding toward zero, the
+frontier model wrote:
+
+```c
+return (x + ((unsigned)x >> 31)) >> 1;     /* wrong on 2,147,483,647 inputs */
+```
+
+C integer promotion makes the whole expression unsigned, so the final shift is
+logical instead of arithmetic and every negative input is wrong. It is the
+standard idiom, it reads as correct, and it passes any test that does not probe
+negatives. The local 7B made the same class of error on the same function; the
+engine authored `((x >> 1) + (x & (0 - (x >> 31))))` instead, and the sweep
+proved it.
+
+Seven of the 27 needed that repair. Four were refused outright — nothing
+unverified shipped.
+
+---
+
+Three more numbers, measured, with the qualifiers attached rather than omitted.
 
 **Per answer, where it can answer.** A frontier call on a task of this shape
 runs roughly 1.5K in / 2K out including reasoning tokens. The engine's
