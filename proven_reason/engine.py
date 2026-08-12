@@ -46,7 +46,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Callable, Dict, List, Optional, Sequence, Tuple
 
-from .evaluator import evaluate, s32
+from .evaluator import compile_expr, evaluate, s32
 
 __all__ = ["Grammar", "Authored", "synthesize", "OPS", "DEFAULT_GRAMMAR"]
 
@@ -90,6 +90,7 @@ class Grammar:
     consts: Sequence[int] = (0, 1, 2, -1, 7, 8, 15, 16, 31, 255, 127, -128,
                              2147483647)
     material: Sequence[Tuple[str, str]] = ()   # (name, expression) pairs
+    promoted: Sequence[Tuple[str, str]] = ()   # material usable as OPERATORS
 
     def with_material(self, instructions) -> "Grammar":
         """Declare proven expressions as things to build WITH.
@@ -100,7 +101,32 @@ class Grammar:
         """
         mat = tuple((getattr(i, "name", str(i)), getattr(i, "expr", str(i)))
                     for i in instructions)
-        return Grammar(self.ops, self.consts, tuple(self.material) + mat)
+        return Grammar(self.ops, self.consts, tuple(self.material) + mat,
+                       self.promoted)
+
+    def promoting(self, instructions) -> "Grammar":
+        """Declare material as OPERATORS, not only as leaves.
+
+        A leaf contributes its VALUE — `unf4(x)` — and can only ever be the
+        whole answer or a direct operand. A promoted instruction contributes
+        its FUNCTION: `unf4(anything)` becomes a single step, so the search
+        can apply it to a computed subexpression.
+
+        Measured, and this is why the distinction exists: inverting
+        `x ^ (x>>4)` took 46 evaluations with UNF4 as a leaf, because the
+        leaf IS the answer. Inverting `(x ^ (x>>4)) + 7` — whose answer is
+        `UNF4(x - 7)` — was unreachable at any honest size, because a leaf
+        cannot be applied. Promotion turns that from unreachable into one
+        step.
+
+        Promotion is not free: every promoted instruction multiplies the
+        work at every level, so promote the few that matter rather than the
+        whole shelf.
+        """
+        pro = tuple((getattr(i, "name", str(i)), getattr(i, "expr", str(i)))
+                    for i in instructions)
+        return Grammar(self.ops, self.consts, self.material,
+                       tuple(self.promoted) + pro)
 
 
 DEFAULT_GRAMMAR = Grammar()
@@ -189,6 +215,17 @@ def synthesize(examples: Sequence[Tuple[int, int]],
         bucket.append(_Node(vals, expr, size))
         return True
 
+    # promoted material: (name, expression, template) — the template is the
+    # instruction's own expression with its free variable made a hole, so it
+    # can be wrapped around any subexpression.
+    import re as _re
+    promoted = []
+    for _n, _e in grammar.promoted:
+        _f = compile_expr(_e)           # native closure, not a tree walk
+        if _f is None:
+            continue
+        promoted.append((_n, _f, _re.sub(r"\bx\b", "{a}", _e)))
+
     # level 0: the variable, the constants, and every declared expression
     add(tuple(s32(x) for x in xs), "x", 0, levels[0])
     for c in grammar.consts:
@@ -215,7 +252,7 @@ def synthesize(examples: Sequence[Tuple[int, int]],
     evals = 0
     try:
         return _ladder(examples, want, grammar, max_size, levels, counts,
-                       seen, add, ok, on_level)
+                       seen, add, ok, on_level, promoted)
     except _Bound:
         return Authored(
             False, evaluations=-1, levels=tuple(counts),
@@ -229,10 +266,27 @@ def synthesize(examples: Sequence[Tuple[int, int]],
 
 
 def _ladder(examples, want, grammar, max_size, levels, counts, seen, add,
-            ok, on_level):
+            ok, on_level, promoted=()):
     evals = 0
     for s in range(1, max_size + 1):
         new: List[_Node] = []
+        # promoted instructions apply to any node of the previous level —
+        # one step, however large the instruction's own expression is.
+        if promoted:
+            for na in levels[s - 1]:
+                for _n, _f, _tmpl in promoted:
+                    evals += 1
+                    try:
+                        vals = tuple(_f(v) for v in na.vals)
+                    except Exception:            # noqa: BLE001
+                        continue
+                    node = _Node(vals, _tmpl.format(a=na.expr), s)
+                    if ok(node):
+                        return Authored(True, node.expr, s, evals, True,
+                                        "minimal in this grammar",
+                                        tuple(counts))
+                    add(vals, node.expr, s, new)
+
         for i in range(s):
             A, B = levels[i], levels[s - 1 - i]
             for na in A:

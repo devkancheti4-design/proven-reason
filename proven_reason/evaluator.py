@@ -29,7 +29,8 @@ from __future__ import annotations
 import ast
 from typing import Dict, Optional
 
-__all__ = ["s32", "evaluate", "receipt", "INT_MIN", "INT_MAX"]
+__all__ = ["s32", "evaluate", "compile_expr", "receipt",
+           "INT_MIN", "INT_MAX"]
 
 INT_MIN = -2147483648
 INT_MAX = 2147483647
@@ -124,3 +125,73 @@ def receipt() -> int:
     """
     v = evaluate("((2 & ((-x) >> 31)) + ((x | (-x)) >> 31))", INT_MIN)
     return 1 if v == 1 else 0
+
+
+# ---------------------------------------------------------------------
+# compile_expr — the same semantics, as a native closure.
+#
+# `evaluate` walks the AST per call. That is fine for a few thousand calls
+# and ruinous for millions: promoting an instruction to an operator applies
+# it to every node of every level, and the walk then dominates everything.
+# Measured in a live run: a promoted search spent its time in the
+# interpreter's own arithmetic dispatch rather than in the search.
+#
+# This compiles an expression ONCE into Python bytecode with s32 wrapped
+# around every operation — the identical wrapping `evaluate` applies, so
+# the results are equal by construction and checked by
+# `test_compile_matches_evaluate`.
+# ---------------------------------------------------------------------
+
+_COMPILED: Dict[str, object] = {}
+
+
+def _emit(n) -> str:
+    if isinstance(n, ast.Name):
+        if n.id != "x":
+            raise ValueError("unknown name")
+        return "s(x)"
+    if isinstance(n, ast.Constant):
+        if not isinstance(n.value, int) or isinstance(n.value, bool):
+            raise ValueError("non-integer constant")
+        return "s(%d)" % n.value
+    if isinstance(n, ast.UnaryOp):
+        v = _emit(n.operand)
+        if isinstance(n.op, ast.USub):
+            return "s(-(%s))" % v
+        if isinstance(n.op, ast.Invert):
+            return "s(~(%s))" % v
+        if isinstance(n.op, ast.UAdd):
+            return v
+        raise ValueError("op")
+    if isinstance(n, ast.BinOp):
+        a, b = _emit(n.left), _emit(n.right)
+        o = n.op
+        for T, sym in ((ast.Add, "+"), (ast.Sub, "-"), (ast.Mult, "*"),
+                       (ast.BitAnd, "&"), (ast.BitOr, "|"),
+                       (ast.BitXor, "^")):
+            if isinstance(o, T):
+                return "s((%s) %s (%s))" % (a, sym, b)
+        if isinstance(o, ast.LShift):
+            return "s((%s) << ((%s) & 31))" % (a, b)
+        if isinstance(o, ast.RShift):
+            return "s((%s) >> ((%s) & 31))" % (a, b)
+        raise ValueError("op")
+    raise ValueError("node")
+
+
+def compile_expr(expr: str):
+    """Return a fast callable f(x) with identical semantics to
+    `evaluate(expr, x)`, or None if the expression is unsupported."""
+    fn = _COMPILED.get(expr)
+    if fn is not None:
+        return fn
+    tree = _parse(expr)
+    if tree is None:
+        return None
+    try:
+        src = "lambda x, s=s32: " + _emit(tree)
+        fn = eval(src, {"s32": s32})            # noqa: S307 - our own source
+    except Exception:                            # noqa: BLE001
+        return None
+    _COMPILED[expr] = fn
+    return fn

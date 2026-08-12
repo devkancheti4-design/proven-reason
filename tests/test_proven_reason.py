@@ -301,7 +301,7 @@ def test_the_core_is_not_in_this_package():
     files = sorted(f for f in os.listdir(pkg) if f.endswith(".py"))
     assert files == ["__init__.py", "catalog.py", "cli.py", "engine.py",
                      "evaluator.py", "models.py", "reasoner.py", "sweep.py",
-                     "wide.py"], files
+                     "wide.py", "wide_dsa.py"], files
     forbidden = ["sphere_synthesize", "Organism", "seed_for_window",
                  "window_for_seed", "window_sd", "first_seed", "collatz",
                  "Collatz"]
