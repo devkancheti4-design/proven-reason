@@ -73,26 +73,30 @@ def main(argv=None) -> int:
     elif ns.cmd == "verify":
         out = rz.gate(ns.candidate, ns.reference)
     else:
+        # This used to call synthesize() directly in a depth-only loop with
+        # the material pinned at armed(), which is the same defect reason()
+        # carried until 1.1.0 -- and it had a second one on top: it never
+        # looked at the SHELF.
+        #
+        # Measured, on `return x<0 ? 0 : (x>255 ? 255 : x);`
+        #     old path : 2m50s, then ABSTAIN at max_nodes
+        #     shelf    : SATU8, instantly, already PROVEN
+        # It spent three minutes failing to re-derive an answer it was
+        # already shipping. reason() looks on the shelf first -- that is
+        # free -- and widens material rather than only depth, so both
+        # faults are fixed by deleting this branch and calling it.
+        from . import reason
         from .reasoner import _pairs_from
-        from .engine import synthesize
-        from . import armed, check
         pairs = _pairs_from(ns.reference)
         if not pairs:
             print("could not compile the reference")
             return 2
-        cut = max(1, len(pairs) * 3 // 4)
-        r = None
-        for rung in range(1, ns.max_size + 1):
-            r = synthesize(pairs[:cut], holdout=pairs[cut:], grammar=armed(),
-                           max_size=rung)
-            if r.found:
-                break
-        if r is None or not r.found:
-            print("ABSTAIN — %s" % (r.note if r else "no attempt"))
+        r = reason(pairs, reference=ns.reference, max_size=ns.max_size)
+        if not r.found:
+            print("ABSTAIN — %s" % (r.note or "no attempt"))
             return 1
-        vv = check("return %s;" % r.expr, ns.reference)
-        print("%s  %s" % (vv.verdict, r.expr))
-        return 0 if vv.proven else 1
+        print("%s  %s" % (r.verdict, r.expr))
+        return 0 if r.verdict == "PROVEN" else 1
 
     print(out.outcome)
     print("  " + out.note)
