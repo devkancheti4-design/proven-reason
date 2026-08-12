@@ -209,6 +209,38 @@ The cost of an instruction fell as the shelf grew, which is the whole design.
 nothing**; with them on the shelf it landed at **424 evaluations in 0.4
 seconds** — the same target, **12,796×**.
 
+### Two kinds of problem, two different winners (v1.0.0)
+
+The same task, LC231 "is x a power of two", run both ways — and the answer
+is that recall and derivation are complementary, not rivals:
+
+```
+a free 7B + the sweep      PROVEN on the first attempt
+                           return (x > 0) && ((x & (x - 1)) == 0);
+
+the engine, deriving       needed material promoted, depth past its usual
+                           bound, and one counterexample the sweep named
+                           (x = -2147483647) before it proved at size 3
+```
+
+LC231 has a name and an idiom, so a small model's recall is exactly right
+and the sweep only has to confirm it. Invert that: on twelve **sealed**
+functions that existed nowhere before their seed, a frontier model shipped
+**eleven wrong answers** while the engine proved three and was wrong zero
+times ([benchmarks/sealed-inverse](benchmarks/sealed-inverse)).
+
+**A model knows what has been written. The engine derives what has not.
+The compiler decides between them.** That is the whole architecture, and
+both halves are measured.
+
+`ISPOW2` is now shelved — but note what it took, because it is the honest
+version of "hard": three things blocked it and all three were the caller's
+— a node cap set too low, material stored as leaves instead of applicable
+operators, and a probe set missing one input. The engine named the first
+two in its own words (`resource bound…`, `no expression of size <= 3…`)
+and the compiler named the third (`first bad x=-2147483647`). Adding that
+single input made it provable in 27,702 evaluations.
+
 ### The inversion rungs (v0.9.0)
 
 Five more, each re-proved over all 4,294,967,296 inputs before landing:

@@ -691,5 +691,16 @@
   "evals": 71,
   "sweep_secs": 9.0,
   "dict_before": 64
+ },
+ {
+  "name": "ISPOW2",
+  "meaning": "one if x is a power of two, else zero",
+  "expr": "((0 - (((1 - ((x - ((x - (x & (x - 1))))) + ((0 - (((0 - ((x - 1) >> 31)) + ((x + (x >> 31)) >> 31)))) + (1 | (x >> 31))))) - 1) >> 31)) + (((1 - ((x - ((x - (x & (x - 1))))) + ((0 - (((0 - ((x - 1) >> 31)) + ((x + (x >> 31)) >> 31)))) + (1 | (x >> 31))))) + ((1 - ((x - ((x - (x & (x - 1))))) + ((0 - (((0 - ((x - 1) >> 31)) + ((x + (x >> 31)) >> 31)))) + (1 | (x >> 31))))) >> 31)) >> 31))",
+  "ref": "return (x > 0 && (x & (x - 1)) == 0) ? 1 : 0;",
+  "verdict": "PROVEN",
+  "size": 3,
+  "evals": 27702,
+  "sweep_secs": 10.4,
+  "note": "LC231. Authored only after the sweep named the missing probe x=-2147483647 and it was added \u2014 the counterexample loop, working."
  }
 ]
