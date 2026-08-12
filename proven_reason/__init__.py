@@ -28,8 +28,8 @@ WHAT THIS PACKAGE IS
     check()       the exhaustive compiled sweep — the part that proves
     gate()        PASS / FIX / REFUSE around any code generator
     synthesize()  the engine — authors, and proves minimality in its grammar
-    catalog()     31 proven instructions, each with its reference
-    reason()      shelf first, then author
+    catalog()     64 proven instructions, each with its reference
+    reason()      shelf first, then author — WIDENING material, not depth
     wide          64-bit arithmetic from four PROVEN 16-bit lanes
 
 The core that produced this engine is **private, not in this distribution,
@@ -57,7 +57,7 @@ from .engine import Authored, DEFAULT_GRAMMAR, Grammar, synthesize
 from .evaluator import INT_MAX, INT_MIN, evaluate, receipt, s32
 from .sweep import TOTAL_INPUTS, Verdict, check, have_compiler
 
-__version__ = "0.3.0"
+__version__ = "1.1.0"
 
 __all__ = [
     "check", "gate", "reason", "catalog", "find", "fits", "verify_all",
@@ -212,15 +212,46 @@ class Rule(NamedTuple):
 def reason(pairs: Sequence[Tuple[int, int]],
            reference: Optional[str] = None,
            max_size: int = 3,
-           on_level=None) -> Rule:
+           on_level=None,
+           consts: Optional[Sequence[int]] = None,
+           promote: Optional[Sequence[str]] = None,
+           widen: bool = True,
+           max_nodes: int = 4_000_000) -> Rule:
     """The smallest rule that reproduces every one of `pairs`.
 
         reason([(0,0), (1,2), (2,4), (-3,-6)])
         # (x << 1)  [EXACT-ON-EXAMPLES(4)]
 
     It looks on the proven shelf first — that is free — and if nothing there
-    fits it AUTHORS one, size-ordered, with the whole catalog declared as
-    material. The first size that matches is minimal in that grammar.
+    fits it AUTHORS one, size-ordered, WIDENING THE MATERIAL as it goes.
+
+    THE ENGINE AND THE REASONER ARE ONE THING. They were not, and that was a
+    defect rather than a design: this entry point used to pin the material at
+    `armed()` and climb only `size`, so anything shaped like a proven
+    instruction APPLIED to a computed subexpression was unreachable here
+    while being trivial through `Grammar(...).promoting(...)`. A caller had
+    to abandon `reason()` and drive the engine directly to get the engine's
+    own capability. There is no longer a weaker way in.
+
+        consts    extra constants to declare. The catalog's defaults cannot
+                  contain every constant a target needs -- Knuth's hash
+                  multiplier is one -- and a constant is material like any
+                  other. Note it is the int32 form: 2654435761 is past
+                  INT_MAX and must be given as -1640531535.
+        promote   names of catalog instructions to declare as OPERATORS
+                  rather than leaves. A leaf contributes its VALUE and can
+                  only be the whole answer or a direct operand; a promoted
+                  instruction contributes its FUNCTION, so the search can
+                  apply it to something it just computed.
+        widen     escalate material automatically on a bound. On by default,
+                  because a ⊥ that never widened its material is a stop and
+                  not a bottom.
+        max_nodes the resource bound. It is the CALLER'S number: when a
+                  verdict says the search reached it, that is a statement
+                  about this argument, not about the engine.
+
+    Every abstention now reports the material it widened through, so the
+    note distinguishes `the space closed empty` from `the supplier stopped`.
 
     Give it `reference=` and the verdict gets stronger: the authored
     expression is swept against your definition over all 4,294,967,296 inputs
@@ -256,18 +287,80 @@ def reason(pairs: Sequence[Tuple[int, int]],
             return Rule(True, ins.expr, v.verdict, str(v), ins)
         break
 
-    # 2. author it
+    # 2. author it — WIDENING THE MATERIAL, not just the depth.
+    #
+    # This loop used to climb `size` with `grammar=armed()` pinned at every
+    # rung: the same material, only deeper. That is the inverse of the law
+    # this project runs on — the fix is MATERIAL, never depth — and it made
+    # the abstention dishonest. An empty result means the SET is empty,
+    # but the set is taken over a GIVEN M, so a ⊥ that never widened M is a
+    # stop, not a bottom. The engine's own loop widens before it abstains:
+    # it kills the shield that starved it and re-cuts wider, three times,
+    # and only then returns ⊥. This wrapper threw that away.
+    #
+    # Measured on `clp2`, whose answer is a proven catalog instruction
+    # APPLIED to a computed subexpression:
+    #     depth-only, material pinned : max_nodes exhausted, ~10 GB, ⊥
+    #     widened by promotion        : PROVEN, size 2, 29,636 evaluations
+    # Same catalog, same depth, same node cap. The only change is that the
+    # material was allowed to grow.
     ex = list(pairs)
     cut = max(1, len(ex) * 3 // 4)
+
+    base = DEFAULT_GRAMMAR
+    if consts:
+        base = Grammar(base.ops, tuple(sorted(set(base.consts) | set(consts))))
+    shelf = list(catalog())
+    by_name = {i.name: i for i in shelf}
+
+    def _rungs():
+        """The material ladder, cheapest material first.
+
+        Cheapest-first is not a preference: ordering the shelf that way is
+        what took SATB from unreachable to 424 evaluations, and it is the
+        same reason promotion goes last. Promotion multiplies the work at
+        every level, so it is spent only after the leaves are exhausted --
+        `promote the few that matter rather than the whole shelf`.
+        """
+        yield "consts only", base
+        yield "armed (leaves)", base.with_material(shelf)
+        if not widen:
+            return
+        named = [by_name[n] for n in (promote or ()) if n in by_name]
+        if named:
+            yield ("promoting %s" % ",".join(i.name for i in named),
+                   base.with_material(shelf).promoting(named))
+            return
+        # No caller preference: promote in cheapest-first batches. An
+        # instruction's expression length is what promotion actually costs,
+        # so that is what orders them.
+        cheap = sorted(shelf, key=lambda i: len(i.expr))
+        for k in (8, 24):
+            yield ("promoting %d cheapest" % k,
+                   base.with_material(shelf).promoting(cheap[:k]))
+
     a = None
-    for size in range(1, max_size + 1):
-        a = synthesize(ex[:cut], holdout=ex[cut:], grammar=armed(),
-                       max_size=size, on_level=on_level)
-        if a.found:
+    tried = []
+    for label, g in _rungs():
+        for size in range(1, max_size + 1):
+            try:
+                a = synthesize(ex[:cut], holdout=ex[cut:], grammar=g,
+                               max_size=size, max_nodes=max_nodes,
+                               on_level=on_level)
+            except MemoryError:
+                a = None
+                break
+            if a.found:
+                break
+        tried.append(label)
+        if a is not None and a.found:
             break
 
     if a is None or not a.found:
-        return Rule(False, None, "ABSTAIN", a.note if a else "no examples")
+        # An honest ⊥: it names the precondition AND what was widened first.
+        return Rule(False, None, "ABSTAIN",
+                    "%s  [material widened through: %s]"
+                    % (a.note if a else "no examples", " -> ".join(tried)))
 
     if reference is None:
         return Rule(True, a.expr, "EXACT-ON-EXAMPLES(%d)" % len(pairs),

@@ -348,3 +348,110 @@ are told the exact input where you are not.
 **It is not smarter than a frontier model.** It is the only participant that
 can tell you *when it is wrong*, and the only one whose silence means
 something.
+
+
+---
+
+# Appendix — measured history
+
+Moved out of README.md, which had grown past the point where anyone
+reads to the end. Nothing here is edited; it is the record as it stood.
+
+### Two kinds of problem, two different winners (v1.0.0)
+
+The same task, LC231 "is x a power of two", run both ways — and the answer
+is that recall and derivation are complementary, not rivals:
+
+```
+a free 7B + the sweep      PROVEN on the first attempt
+                           return (x > 0) && ((x & (x - 1)) == 0);
+
+the engine, deriving       needed material promoted, depth past its usual
+                           bound, and one counterexample the sweep named
+                           (x = -2147483647) before it proved at size 3
+```
+
+LC231 has a name and an idiom, so a small model's recall is exactly right
+and the sweep only has to confirm it. Invert that: on twelve **sealed**
+functions that existed nowhere before their seed, a frontier model shipped
+**eleven wrong answers** while the engine proved three and was wrong zero
+times ([benchmarks/sealed-inverse](benchmarks/sealed-inverse)).
+
+**A model knows what has been written. The engine derives what has not.
+The compiler decides between them.** That is the whole architecture, and
+both halves are measured.
+
+`ISPOW2` is now shelved — but note what it took, because it is the honest
+version of "hard": three things blocked it and all three were the caller's
+— a node cap set too low, material stored as leaves instead of applicable
+operators, and a probe set missing one input. The engine named the first
+two in its own words (`resource bound…`, `no expression of size <= 3…`)
+and the compiler named the third (`first bad x=-2147483647`). Adding that
+single input made it provable in 27,702 evaluations.
+
+### The inversion rungs (v0.9.0)
+
+Five more, each re-proved over all 4,294,967,296 inputs before landing:
+`XS4`, `XS8`, `XL8`, `XL16`, `UNFL8` — the xor-shift folds and their
+unfolds, the material an inverse is built from. Catalog: **63**.
+
+**Three were authored and PROVEN but are NOT shipped, and the reason is a
+defect in this package, not in the answers.** `catalog/oversized.json`
+records them with their measurements. The engine returned them as size-2
+and size-3 expressions — two or three operations over declared material —
+but material is stored as **flattened text**, so each rung inlines the full
+text of everything beneath it and the size compounds down a ladder:
+
+```
+UNFL8   size 2          123 characters
+UNF4    size 2      112,085 characters
+UNF8    size 2    3,764,710 characters
+```
+
+All three are the same size to the engine. The difference is entirely what
+their leaves happened to be. Promoting a 3.8 MB expression to an operator —
+wrapping that text around every node of every level — exhausted memory in a
+live run before any search happened.
+
+**The fix is to store material by reference and expand once at proof time.**
+Until then the catalog holds only expressions small enough to be honest
+about, and the oversized three are recorded as measurements rather than
+shipped as blobs.
+
+### The DSA shelf (v0.7.0)
+
+Twenty-six further instructions — the fold ladders hard DSA answers are made
+of: the or-shift cascade to `NEXTP2`, the xor folds to `PARITY`, the
+masked-add reduction to `POPCNT`, the swap ladders to `BSWAP` and `REVBITS`,
+plus `SMEAR`, `CTZ_M`, `ILOG2P`. Each authored from compiled pairs, each
+swept over all 4,294,967,296 inputs, each becoming material for the next.
+The measured lesson repeated at scale: `POPCNT` abstained for a combined
+**96 minutes** across two rounds while a rung was missing, then landed in
+**41 seconds** once `PC8` existed. Depth was never the lever; the ladder's
+26 landings all sat within the authored STOP bound (rung ≤ 3).
+
+The exam: the three tasks the gated battery REFUSED — popcount, byte swap,
+next-power-of-two — re-gated against the stocked catalog, using the models'
+original wrong answers (one of them non-terminating):
+
+```
+count how many bits of x are set        FIX — PROVEN shelf rule POPCNT
+swap the four bytes of x                FIX — PROVEN shelf rule BSWAP
+smallest power of two >= x              FIX — PROVEN shelf rule NEXTP2
+
+converted: 3 of 3 former REFUSEs now ship proven code
+```
+
+---
+
+## Found by adversarial use, fixed in 0.3.0
+
+Running these benchmarks surfaced two real defects — the kind only use finds:
+
+1. **`check()` had no timeout.** A candidate with a non-terminating loop
+   hung the caller forever (measured: 57 minutes). Now `NON-TERMINATING` —
+   never a proof, never a pass.
+2. **`synthesize()` had no memory bound.** A collision-free level can
+   outgrow RAM while being built; the OS killed six searches mid-level.
+   Now `max_nodes` — crossing it is a reported abstention, not a crash.
+

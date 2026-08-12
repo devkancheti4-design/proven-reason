@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """duel_gen.py — PHASE 1 of the sealed duel: Fable 5 versus the reasoner
-(the engine authored by the sphere, shipped in proven-reason — the sphere
-itself does not compete).
+shipped in proven-reason. The authoring system that produced it is not
+included here and does not compete.
 
 Twenty secret functions, sampled from the engine's own grammar by a fixed
 seed, sizes 2..6 — compositions with no name and no idiom, so neither side

@@ -12,31 +12,31 @@ by whoever holds that repository — they are not paths in this package.*
 ## THE LINEAGE — READ THIS FIRST
 
 ```
-  THE SPHERE          the core.  It does not write proven-reason.
+  THE CORE            private.  It does not write proven-reason.
       │               It manufactures the engines.
       ▼
-  THE ENGINES         authored by the sphere from material and intent.
+  THE ENGINES         authored by the core from material and intent.
       │               These write proven-reason.
       ▼
   proven-reason       the bolt-on reasoner.  This is the artefact that
       │               ships, and the only thing that competes.
       ▼
-  vs Opus 5           proven-reason stands here.  The sphere does not.
+  vs Opus 5           proven-reason stands here.  The core does not.
 ```
 
-**The sphere is two steps upstream of every benchmark in this document.** When
+**The core is two steps upstream of every benchmark in this document.** When
 a table says something tied Opus 5, the subject is **proven-reason**, not the
-sphere. When a table says an instruction was authored in 424 evaluations, the
-subject is the sphere. They are not interchangeable and swapping them is the
+core. When a table says an instruction was authored in 424 evaluations, the
+subject is the core. They are not interchangeable and swapping them is the
 fastest way to make a true claim sound false.
 
-The one-line version: **the sphere manufactures the manufacturers.**
+The one-line version: **the core manufactures the manufacturers.**
 
 ---
 
 ## THE THREE ACTORS
 
-**THE SPHERE** authors expressions. It never proves anything.
+**THE CORE** authors expressions. It never proves anything.
 
 **THE COMPILER** proves. `cc -O3 -fwrapv -fno-lto`, three translation units,
 every one of the 4,294,967,296 int32 inputs, and a verdict returned in under
@@ -47,13 +47,13 @@ in this project is the compiler's word, not the engine's.
 picks intent words, chooses constants, and decides what material to declare.
 The supplier authored **no expression at any point** and made **34 mistakes**.
 
-If you say *"the sphere proves it"*, someone will correctly say it does not.
+If you say *"the core proves it"*, someone will correctly say it does not.
 Say: **it authors, and a compiler checks every input that exists.** That is
 the stronger claim anyway — the checker is not the thing being checked.
 
 ---
 
-## WHAT THE SPHERE AUTHORED
+## WHAT THE CORE AUTHORED
 
 No human wrote any of these. Every one was swept over all 2^32 inputs.
 
@@ -319,7 +319,7 @@ Three preconditions: **material counted, intent ruled out, size shown.**
 - ❌ **"Flawless."** Bug fifteen and bug sixteen were real engine defects, both
   in this repo's own history. Bug fifteen let the gate accept an expression
   that was wrong on the machine at `INT_MIN`, and cost 11 boundary faults.
-- ❌ **"The sphere beats frontier models."** Wrong on both ends. The sphere is
+- ❌ **"The core beats frontier models."** Wrong on both ends. The core is
   not in that comparison — **proven-reason** is, and what it did was **tie**
   Opus 5 two-for-two on sealed relations and ten-for-ten on integer tasks.
   Outside integers it is not in the category.

@@ -3,10 +3,10 @@ Copyright 2026 Devi Eswar Kancheti
 
 Licensed under the Apache License, Version 2.0. See LICENSE.
 
-This product includes a catalog of 31 integer instructions
+This product includes a catalog of 64 integer instructions
 (catalog/isa.json). No human wrote those expressions. Each was authored
-by a program-synthesis engine ("the sphere", not included in this
-distribution) from example pairs a compiled program printed, and each was
+by a program-synthesis engine that is NOT included in this distribution
+and is not part of this product, from example pairs a compiled program printed, and each was
 verified by an exhaustive compiled sweep over all 4,294,967,296 int32
 inputs against the C reference stored beside it.
 

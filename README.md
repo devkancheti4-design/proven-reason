@@ -1,9 +1,70 @@
 # proven-reason
 
-**A bolt-on that tells you when your code is wrong.** Not by testing a few
-inputs — by running **every one of the 4,294,967,296 int32 inputs** through
-your code and a reference, in a compiled sweep, and reporting what the machine
-found.
+**It is not a prover. It is a reasoner.**
+
+Say that first, because the other framing is both weaker and wrong. Z3 is a
+prover. CBMC is a prover. A twelve-line `for` loop over every `int32` is a
+prover, and on a straight equivalence check Z3 beats this package by more
+than a hundred times. Proving is commodity, and this package does not
+pretend to own it.
+
+**What it does is derive the rule.** Give it examples and it authors the
+smallest expression that reproduces every one of them, out of material that
+grows as you use it — and when nothing in that material can reach the
+answer, it says so and names what was missing, instead of inventing
+something plausible.
+
+```python
+from proven_reason import reason
+
+r = reason([(0, 0), (1, 2), (2, 4), (-3, -6)])
+r.expr            # (x << 1)
+r.verdict         # EXACT-ON-EXAMPLES(4)
+```
+
+Then a decider judges it — and the decider is *not* this package's claim to
+fame, it is this package's referee:
+
+```python
+r = reason(pairs, reference="return x*10;")
+r.verdict         # PROVEN — agrees on every one of 4,294,967,296 int32 inputs
+```
+
+**Three actors, no overlap.** The reasoner *authors*. A trusted decider —
+the compiled sweep here, and Z3 or CBMC just as legitimately — *proves*.
+You *supply*: the examples, the reference, and the material. If you say
+"it proves it", someone will correctly say it does not. Say **it derives
+what has not been written, and a decider checks every input that exists.**
+That is the stronger claim anyway: the checker is not the thing being
+checked.
+
+A model recalls what is in its training data. A prover checks a claim you
+already have. Neither one hands you the rule when the rule was never
+written down — that is the gap this fills.
+
+---
+
+## Start here
+
+| you are | go to |
+|---|---|
+| **bolting this onto a model** — Claude, GPT, Gemini, or a 7B on your laptop | **[FUSE.md](FUSE.md)** — one call, four adapters, works with anything that takes text and returns text |
+| **a student** — free, offline, no key, no card | **[STUDENTS.md](STUDENTS.md)** — five guided exercises |
+| **an AI/ML engineer** — putting a gate in front of generated code | **[ENGINEERS.md](ENGINEERS.md)** — the live record and the integration |
+| **looking for everything else** | **[MANUAL.md](MANUAL.md)** |
+
+```bash
+git clone https://github.com/devkancheti4-design/proven-reason
+cd proven-reason && python3 -m pip install -e .
+proven-reason ask "one if x is odd, else zero" --reference "return x & 1;"
+```
+
+Python 3.10+ and a C compiler on `PATH`. No API key, no network, no model
+required.
+
+---
+
+## Verifying code you already have
 
 ```python
 from proven_reason import check
@@ -54,6 +115,56 @@ model shipped five boundary-broken answers it could not tell from its
 correct ones. Head-to-head: 5 wins, 8 ties, 0 losses. The seven abstentions
 shipped nothing — and the frontier model's answers there remain unknown,
 not victories.
+
+---
+
+## What it saves
+
+Three numbers, measured, with the qualifiers attached rather than omitted.
+
+**Per answer, where it can answer.** A frontier call on a task of this shape
+runs roughly 1.5K in / 2K out including reasoning tokens. The engine's
+authoring is milliseconds to seconds, and one exhaustive proof is about
+eleven CPU-seconds on one core:
+
+| | per answer |
+|---|---|
+| frontier model, $5/$25 per Mtok | ~$0.058 |
+| frontier model, $10/$50 per Mtok | ~$0.115 |
+| **this package** | **~$0.0001**, or exactly $0 on hardware you own |
+
+That is roughly **500x** cheaper per answer, and it runs offline with no key.
+
+**As a router, over a whole workload.** The honest number is smaller,
+because abstentions still cost you a frontier call. On the sealed duel it
+answered 13 of 20, so:
+
+```
+all-frontier, 20 tasks    20 x $0.058 = $1.16
+this package first         7 x $0.058 = $0.41      ~65% fewer tokens
+```
+
+**65%, not 500x** — that is the figure to plan with.
+
+**And the saving that actually matters is neither of those.** It is the
+wrong answers that never reached the codebase:
+
+| | wrong answers raw | wrong answers shipped |
+|---|---:|---:|
+| four free local models, two batteries | **41** | **0** |
+| frontier model, 32 sealed tasks | **16** | — (no gate) |
+| **this package**, same 32 | **0** | **0** |
+
+A free 7B behind this gate ships less broken code than a frontier model
+without one. What a shipped `int32` boundary bug costs to find later is not
+a number this repository can honestly put a dollar on — so it does not.
+
+**Where it does *not* save.** On a named, idiomatic problem a model is
+faster and cheaper than a search: asked for `isPowerOfTwo`, a free 7B
+answered `(x > 0) && ((x & (x-1)) == 0)` correctly on the first attempt,
+while the engine needed promoted material and a counterexample to derive it.
+Recall beats derivation whenever the answer was already written down
+somewhere. This is for when it was not.
 
 ---
 
@@ -127,7 +238,7 @@ which is not described here and is not needed to use any of this.
 | `check()` | the exhaustive compiled sweep — the part that proves |
 | `gate()` | PASS / FIX / REFUSE around any code generator |
 | `synthesize()` | the engine — authors, and proves minimality in its grammar |
-| `catalog()` | 31 proven instructions, each with its reference |
+| `catalog()` | 64 proven instructions, each with its reference |
 | `reason()` | shelf first, then author |
 | `wide` | 64-bit from four PROVEN 16-bit lanes |
 
@@ -145,41 +256,6 @@ r.note    # 'no expression of size <= 3 in this grammar. Space searched:
 It cannot say "no such rule exists" and it never appears to. It says: not at
 this size, not in this grammar, not with this material — and each of those is
 a different thing for you to change. A test enforces it.
-
-### Material is the lever
-
-```python
-from proven_reason import reason, synthesize, Grammar, armed
-
-synthesize(pairs)                      # base grammar
-synthesize(pairs, grammar=armed())     # the whole proven catalog DECLARED
-```
-
-Registering is not declaring. Measured on the engine repository, same target,
-same everything except what was declared:
-
-| | evaluations | result |
-|---|---:|---|
-| halves not declared | **5,425,498** | found nothing |
-| halves declared | **424** | size 2, 0.4s |
-
-**12,796×.** Nothing about the search changed.
-
-### What the ladder costs
-
-With the whole catalog declared, measured:
-
-| level | nodes | evaluations | time |
-|---:|---:|---:|---:|
-| 1 | 859 | 3,864 | 0.0s |
-| 2 | 37,044 | 265,859 | 0.4s |
-| 3 | 1,806,713 | 15,991,565 | 25.1s |
-
-`max_size` defaults to **3** for that reason. Level 4 is about a billion
-evaluations and several gigabytes — raise it deliberately, on a target you
-believe needs it.
-
----
 
 ## The shelf
 
@@ -209,133 +285,7 @@ The cost of an instruction fell as the shelf grew, which is the whole design.
 nothing**; with them on the shelf it landed at **424 evaluations in 0.4
 seconds** — the same target, **12,796×**.
 
-### Two kinds of problem, two different winners (v1.0.0)
-
-The same task, LC231 "is x a power of two", run both ways — and the answer
-is that recall and derivation are complementary, not rivals:
-
-```
-a free 7B + the sweep      PROVEN on the first attempt
-                           return (x > 0) && ((x & (x - 1)) == 0);
-
-the engine, deriving       needed material promoted, depth past its usual
-                           bound, and one counterexample the sweep named
-                           (x = -2147483647) before it proved at size 3
-```
-
-LC231 has a name and an idiom, so a small model's recall is exactly right
-and the sweep only has to confirm it. Invert that: on twelve **sealed**
-functions that existed nowhere before their seed, a frontier model shipped
-**eleven wrong answers** while the engine proved three and was wrong zero
-times ([benchmarks/sealed-inverse](benchmarks/sealed-inverse)).
-
-**A model knows what has been written. The engine derives what has not.
-The compiler decides between them.** That is the whole architecture, and
-both halves are measured.
-
-`ISPOW2` is now shelved — but note what it took, because it is the honest
-version of "hard": three things blocked it and all three were the caller's
-— a node cap set too low, material stored as leaves instead of applicable
-operators, and a probe set missing one input. The engine named the first
-two in its own words (`resource bound…`, `no expression of size <= 3…`)
-and the compiler named the third (`first bad x=-2147483647`). Adding that
-single input made it provable in 27,702 evaluations.
-
-### The inversion rungs (v0.9.0)
-
-Five more, each re-proved over all 4,294,967,296 inputs before landing:
-`XS4`, `XS8`, `XL8`, `XL16`, `UNFL8` — the xor-shift folds and their
-unfolds, the material an inverse is built from. Catalog: **63**.
-
-**Three were authored and PROVEN but are NOT shipped, and the reason is a
-defect in this package, not in the answers.** `catalog/oversized.json`
-records them with their measurements. The engine returned them as size-2
-and size-3 expressions — two or three operations over declared material —
-but material is stored as **flattened text**, so each rung inlines the full
-text of everything beneath it and the size compounds down a ladder:
-
-```
-UNFL8   size 2          123 characters
-UNF4    size 2      112,085 characters
-UNF8    size 2    3,764,710 characters
-```
-
-All three are the same size to the engine. The difference is entirely what
-their leaves happened to be. Promoting a 3.8 MB expression to an operator —
-wrapping that text around every node of every level — exhausted memory in a
-live run before any search happened.
-
-**The fix is to store material by reference and expand once at proof time.**
-Until then the catalog holds only expressions small enough to be honest
-about, and the oversized three are recorded as measurements rather than
-shipped as blobs.
-
-### The DSA shelf (v0.7.0)
-
-Twenty-six further instructions — the fold ladders hard DSA answers are made
-of: the or-shift cascade to `NEXTP2`, the xor folds to `PARITY`, the
-masked-add reduction to `POPCNT`, the swap ladders to `BSWAP` and `REVBITS`,
-plus `SMEAR`, `CTZ_M`, `ILOG2P`. Each authored from compiled pairs, each
-swept over all 4,294,967,296 inputs, each becoming material for the next.
-The measured lesson repeated at scale: `POPCNT` abstained for a combined
-**96 minutes** across two rounds while a rung was missing, then landed in
-**41 seconds** once `PC8` existed. Depth was never the lever; the ladder's
-26 landings all sat within the authored STOP bound (rung ≤ 3).
-
-The exam: the three tasks the gated battery REFUSED — popcount, byte swap,
-next-power-of-two — re-gated against the stocked catalog, using the models'
-original wrong answers (one of them non-terminating):
-
-```
-count how many bits of x are set        FIX — PROVEN shelf rule POPCNT
-swap the four bytes of x                FIX — PROVEN shelf rule BSWAP
-smallest power of two >= x              FIX — PROVEN shelf rule NEXTP2
-
-converted: 3 of 3 former REFUSEs now ship proven code
-```
-
----
-
-## Install — three commands to a fused model
-
-```bash
-git clone https://github.com/devkancheti4-design/proven-reason
-cd proven-reason && python3 -m pip install -e .
-```
-
-```bash
-ollama pull qwen2.5-coder:7b     # or any model — the guarantee doesn't care
-```
-
-```bash
-proven-reason ask "one if x is odd, else zero" --reference "return x & 1;"
-```
-
-A real first run of exactly that command: the model answered `x % 2` —
-wrong on **1,073,741,824 inputs** (every odd negative) — and what shipped
-was the proven repair:
-
-```
-FIX
-  rejected (wrong on 1,073,741,824 inputs, first at x=-2147483647);
-  engine authored a replacement in 89 evaluations and the sweep proved it
-  (judge said HOLD)
-  ships: return (x & 1);
-```
-
-### 64-bit too
-
-```bash
-proven-reason verify64 "return a + b;" \
-    --reference "return (long long)((unsigned long long)a + (unsigned long long)b);"
-```
-
-At 64 bits the strongest honest word is **TESTED** (4,000,169 edge-heavy
-pairs — 2¹²⁸ cannot be swept), and a wrong candidate is repaired with the
-lane composition whose four 16-bit lanes are each **PROVEN** over their own
-2³². The verdict string always says which word it earned.
-
-### Fuse ANY model — three lines
+## Fuse ANY model — three lines
 
 ```python
 from proven_reason.models import Ollama, Callable_, fuse
@@ -418,54 +368,18 @@ A composition inherits the weakest word in it.
 
 ---
 
-## What it will not do
 
-- **`int32 -> int32`, 32 bits of input in TOTAL.** Not per operand. Two `int`
-  arguments is 64 bits and does not fit. The famous `(lo+hi)/2` binary-search
-  overflow is exactly the kind of bug it **cannot** catch. Worth knowing before
-  you promise anything.
-- **It is not a language model.** No opinion on prose, API design, or anything
-  whose answer is not an integer.
-- **It has no clock.** It walks the whole ladder it is given, however long
-  that takes. Bound work by `max_size`, never by a timer.
-- **Minimal means minimal in the grammar you gave it**, never over all
-  expressions. Hand it fewer operators and it will honestly report a larger
-  answer as minimal.
+### From the command line
 
-## Where it earns its keep
+```bash
+proven-reason verify64 "return a + b;" \
+    --reference "return (long long)((unsigned long long)a + (unsigned long long)b);"
+```
 
-Saturating arithmetic in codecs and DSP · sign extension in instruction
-decoders · colour clamping in graphics · byte swapping in serialization · hash
-mixers · alignment rounding in allocators · fixed-point in game engines.
-
-For a typical web engineer this is close to none of their code. For an
-embedded, codec, graphics, database, or compiler engineer it is a real slice —
-and it is the slice where the bugs are invisible until they are expensive.
-
----
-
-## The honest summary
-
-**It is not smarter than a frontier model.** On tasks outside integers it is
-not in the category at all, and on arrays and prose a frontier model and a 7B
-model earn the identical verdict here, because neither can be checked.
-
-It is the only participant that can tell you **when it is wrong**, and the only
-one whose **silence means something**.
-
-See [ATTRIBUTION.md](ATTRIBUTION.md) for who did what, every measurement, and
-all 34 faults — which belong to the supplier, not the engine.
-
-## Found by adversarial use, fixed in 0.3.0
-
-Running these benchmarks surfaced two real defects — the kind only use finds:
-
-1. **`check()` had no timeout.** A candidate with a non-terminating loop
-   hung the caller forever (measured: 57 minutes). Now `NON-TERMINATING` —
-   never a proof, never a pass.
-2. **`synthesize()` had no memory bound.** A collision-free level can
-   outgrow RAM while being built; the OS killed six searches mid-level.
-   Now `max_nodes` — crossing it is a reported abstention, not a crash.
+At 64 bits the strongest honest word is **TESTED** (4,000,169 edge-heavy
+pairs — 2¹²⁸ cannot be swept), and a wrong candidate is repaired with the
+lane composition whose four 16-bit lanes are each **PROVEN** over their own
+2³². The verdict string always says which word it earned.
 
 ## For AI/ML engineers
 

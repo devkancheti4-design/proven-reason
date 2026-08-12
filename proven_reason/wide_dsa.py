@@ -3,7 +3,7 @@
 """wide_dsa — 64-bit DSA functions, authored INDIRECTLY.
 
 Nothing here was written as 64-bit code. Each function splits its operand
-into two 32-bit lanes and runs the catalog's sphere-authored expressions —
+into two 32-bit lanes and runs the catalog's authored expressions —
 verbatim, via the evaluator — on each lane, then joins the lane results by
 the mechanical identity of the operation:
 
