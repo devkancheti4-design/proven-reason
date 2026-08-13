@@ -30,6 +30,7 @@ WHAT THIS PACKAGE IS
     synthesize()  the engine — authors, and proves minimality in its grammar
     catalog()     64 proven instructions, each with its reference
     reason()      shelf first, then author — WIDENING material, not depth
+    pretty()      fold authored soup back into catalog names
     wide          64-bit arithmetic from four PROVEN 16-bit lanes
 
 The core that produced this engine is **private, not in this distribution,
@@ -55,9 +56,10 @@ from .catalog import Instruction, catalog, find, fits, verify_all
 from .reasoner import Gated, Reasoner, decisions, gate64
 from .engine import Authored, DEFAULT_GRAMMAR, Grammar, synthesize
 from .evaluator import INT_MAX, INT_MIN, evaluate, receipt, s32
+from .render import pretty, pretty_c
 from .sweep import TOTAL_INPUTS, Verdict, check, have_compiler
 
-__version__ = "1.2.0"
+__version__ = "1.3.0"
 
 __all__ = [
     "check", "gate", "reason", "catalog", "find", "fits", "verify_all",
@@ -65,6 +67,7 @@ __all__ = [
     "Reasoner", "Gated", "decisions", "gate64",
     "evaluate", "receipt", "s32", "Verdict", "GateResult", "Rule",
     "Instruction", "INT_MIN", "INT_MAX", "TOTAL_INPUTS", "have_compiler",
+    "pretty", "pretty_c",
 ]
 
 

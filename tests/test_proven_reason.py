@@ -305,8 +305,8 @@ def test_the_core_is_not_in_this_package():
     pkg = os.path.join(ROOT, "proven_reason")
     files = sorted(f for f in os.listdir(pkg) if f.endswith(".py"))
     assert files == ["__init__.py", "catalog.py", "cli.py", "engine.py",
-                     "evaluator.py", "models.py", "reasoner.py", "sweep.py",
-                     "wide.py", "wide_dsa.py"], files
+                     "evaluator.py", "models.py", "reasoner.py",
+                     "render.py", "sweep.py", "wide.py", "wide_dsa.py"], files
     forbidden = ["sphere_synthesize", "Organism", "seed_for_window",
                  "window_for_seed", "window_sd", "first_seed", "collatz",
                  "Collatz"]
@@ -571,3 +571,35 @@ def test_oversized_are_recorded_not_hidden():
     rows = _j.load(open(p))
     for r in rows:
         assert r["chars"] > 20000 and r["ref"] and r["evals"]
+
+
+def test_render_folds_soup_into_catalog_names():
+    """THE READABILITY REGRESSION TEST.
+
+    Material inlines on emission, so a proven answer can be hundreds of
+    characters of soup — correct, and not code-review-able. An adversarial
+    review called it precisely: until the emitter prints shelf instructions
+    by name, half the outputs cannot be reviewed. pretty() is that emitter;
+    this pins that an instruction's own body folds to its name, that the
+    fold is structural (an APPLIED instruction folds around its operand),
+    and that unfoldable text passes through untouched rather than erroring.
+    """
+    from proven_reason.catalog import catalog
+    from proven_reason.render import pretty, pretty_c
+
+    cat = {i.name: i.expr for i in catalog()}
+    body, used = pretty(cat["SATU8"])
+    assert body == "SATU8(x)" and "SATU8" in used
+
+    applied, used = pretty(cat["SATU8"].replace("x", "((x >> 1))"))
+    assert applied == "SATU8((x >> 1))"
+
+    same, used = pretty("(x + 1)")          # too small to fold — unchanged
+    assert same == "(x + 1)" and used == {}
+
+    unparseable, used = pretty("not an expression ((")
+    assert unparseable == "not an expression ((" and used == {}
+
+    c = pretty_c(cat["SATU8"], "clamp_u8")
+    assert "#define SATU8(x)" in c
+    assert "int clamp_u8(int x) { return SATU8(x); }" in c

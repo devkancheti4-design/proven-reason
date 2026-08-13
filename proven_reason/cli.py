@@ -96,6 +96,11 @@ def main(argv=None) -> int:
             print("ABSTAIN — %s" % (r.note or "no attempt"))
             return 1
         print("%s  %s" % (r.verdict, r.expr))
+        from .render import pretty
+        folded, used = pretty(str(r.expr))
+        if used:
+            print("  = %s   [%s — definitions ship inline via pretty_c()]"
+                  % (folded, ", ".join(sorted(used))))
         return 0 if r.verdict == "PROVEN" else 1
 
     print(out.outcome)
