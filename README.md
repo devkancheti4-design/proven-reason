@@ -49,6 +49,7 @@ written down — that is the gap this fills.
 | you are | go to |
 |---|---|
 | **bolting this onto a model** — Claude, GPT, Gemini, or a 7B on your laptop | **[FUSE.md](FUSE.md)** — one call, four adapters, works with anything that takes text and returns text |
+| **using it beyond one-variable int32** — two operands, 64-bit, any model, any decider | **[EVERYWHERE.md](EVERYWHERE.md)** — the recipes, with the honest word each domain earns |
 | **a student** — free, offline, no key, no card | **[STUDENTS.md](STUDENTS.md)** — five guided exercises |
 | **an AI/ML engineer** — putting a gate in front of generated code | **[ENGINEERS.md](ENGINEERS.md)** — the live record and the integration |
 | **looking for everything else** | **[MANUAL.md](MANUAL.md)** |
