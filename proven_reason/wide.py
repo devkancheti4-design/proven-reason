@@ -25,10 +25,16 @@ All four PROVEN by an exhaustive compiled sweep over all 4,294,967,296 int32
 inputs — 3 translation units, cc -O3 -fwrapv -fno-lto, and a verdict under
 2.0s is a SUSPECTED FOLD, never a proof:
 
-    q1_sum16    size 3   47,124 evaluations   sweep 8.7s   PROVEN
-    q2_cout16   size 7   82,782 evaluations   sweep 8.7s   PROVEN
-    q3_sumcin   size 3   47,165 evaluations   sweep 8.9s   PROVEN
-    q4_coutcin  size 7   84,788 evaluations   sweep 8.8s   PROVEN
+    sum16     (65535 & (x + (x >> 16)))                     sweep 9.0s  PROVEN
+    cout16    (((x & 65535) + ((x >> 16) & 65535)) >> 16)    sweep 9.2s  PROVEN
+    sumcin    (65535 & (x - (x >> 1)))                       sweep 9.0s  PROVEN
+    coutcin   ((((x >> 1) & 65535) + (x & 1)) >> 16)         sweep 9.0s  PROVEN
+
+These are the expressions THEMSELVES, stored in LANES and EXECUTED by
+lane_sum/lane_carry. An earlier revision shipped only the metadata of this
+table while the code ran native + behind an `if False` — the layer was
+checking + against +. That defect was found by adversarial review, and the
+fix was to author the lanes again and store what was authored.
 
 Compose them and the CARRIED lane is SIXTEEN bits wide, where this project's
 own earlier record said fifteen — because 15 + 15 + 1 = 31 was the widest
@@ -97,26 +103,30 @@ VERDICT = ("four PROVEN 16-bit lanes; composition TESTED on 6 exhaustive "
 LANES = {
     "sum16": {
         "meaning": "the low 16 bits of a + b, operands packed 16|16",
-        "bits_in": 32, "size": 3, "evals": 47124, "sweep_secs": 8.7,
-        "verdict": "PROVEN",
+        "bits_in": 32, "size": 3,
+        "verdict": "PROVEN", "sweep_secs": 9.0,
+        "expr": "(65535 & (x + (x >> 16)))",
         "reference": "int a=(x>>16)&65535, b=x&65535; return (a+b) & 65535;",
     },
     "cout16": {
         "meaning": "the carry out of a + b, operands packed 16|16",
-        "bits_in": 32, "size": 7, "evals": 82782, "sweep_secs": 8.7,
-        "verdict": "PROVEN",
+        "bits_in": 32, "size": 5,
+        "verdict": "PROVEN", "sweep_secs": 9.2,
+        "expr": "(((x & 65535) + ((x >> 16) & 65535)) >> 16)",
         "reference": "int a=(x>>16)&65535, b=x&65535; return ((a+b)>>16)&1;",
     },
     "sumcin": {
         "meaning": "the low 16 bits of s + cin, packed 16|1",
-        "bits_in": 17, "size": 3, "evals": 47165, "sweep_secs": 8.9,
-        "verdict": "PROVEN",
+        "bits_in": 17, "size": 3,
+        "verdict": "PROVEN", "sweep_secs": 9.0,
+        "expr": "(65535 & (x - (x >> 1)))",
         "reference": "int s=(x>>1)&65535, c=x&1; return (s+c) & 65535;",
     },
     "coutcin": {
         "meaning": "the carry out of s + cin, packed 16|1",
-        "bits_in": 17, "size": 7, "evals": 84788, "sweep_secs": 8.8,
-        "verdict": "PROVEN",
+        "bits_in": 17, "size": 5,
+        "verdict": "PROVEN", "sweep_secs": 9.0,
+        "expr": "((((x >> 1) & 65535) + (x & 1)) >> 16)",
         "reference": "int s=(x>>1)&65535, c=x&1; return ((s+c)>>16)&1;",
     },
 }
@@ -133,23 +143,26 @@ def _pack1(s_, c):
 def lane_sum(a, b, cin=0):
     """One 16-bit lane: (a + b + cin) & 0xFFFF.
 
-    Built from two PROVEN pieces, in the order the split requires: add the
-    two operands, then fold the carry-in.  Each step is a lookup into an
-    expression verified over its whole 32-bit domain."""
-    w = _pack16(a, b)
-    s_ = _eval(LANES["sum16"]["reference"].join(("", "")), w) \
-        if False else ((a & 65535) + (b & 65535)) & 65535
-    return ((s_ & 65535) + (cin & 1)) & 65535
+    EXECUTES the two PROVEN authored expressions, in the order the split
+    requires: sum16 on the packed operands, then sumcin to fold the carry.
+    This used to read `if False else <native +>` — the proven expression
+    was dead code and the layer was verifying Python's + against Python's
+    +. The expressions now ship in LANES["*"]["expr"] and this runs them."""
+    s_ = _eval(LANES["sum16"]["expr"], _pack16(a, b))
+    return _eval(LANES["sumcin"]["expr"], _pack1(s_, cin)) & 65535
 
 
 def lane_carry(a, b, cin=0):
     """The carry out of one 16-bit lane, from the two PROVEN carry pieces.
 
     Both carries cannot be set at once: if a + b overflows sixteen bits then
-    its low half is at most 0xFFFE, so adding cin cannot overflow again."""
-    t = (a & 65535) + (b & 65535)
-    c1 = (t >> 16) & 1
-    c2 = (((t & 65535) + (cin & 1)) >> 16) & 1
+    its low half is at most 0xFFFE, so adding cin cannot overflow again.
+    Like lane_sum, this now EXECUTES the authored expressions rather than
+    re-deriving the carry in native Python."""
+    w = _pack16(a, b)
+    c1 = _eval(LANES["cout16"]["expr"], w) & 1
+    s_ = _eval(LANES["sum16"]["expr"], w)
+    c2 = _eval(LANES["coutcin"]["expr"], _pack1(s_, cin)) & 1
     return c1 | c2
 
 
@@ -184,13 +197,19 @@ def cmp64(a, b):
     return 0
 
 
-def selftest(n=200000):
+def selftest(n=200000, seed=None):
     """Check the composition against the machine's own 64-bit arithmetic.
 
     This is TESTING, not proving, and it says so.  It exercises the carry
     boundaries deliberately — all-ones lanes, 2^16 and 2^32 crossings, and
     the 2^63 sign edge — because that is where a ripple breaks if it breaks.
+
+    `seed` defaults to ENTROPY, so every run explores new inputs — a fixed
+    default seed meant rerunning added zero coverage, forever, which an
+    adversarial review correctly called out. Pass a seed to reproduce a
+    failing run; the seed used is always in the returned dict.
     """
+    import os as _os
     import random
     M = (1 << 64) - 1
     edges = [0, 1, 0xFFFF, 0x10000, 0xFFFFFFFF, 0x100000000,
@@ -205,7 +224,9 @@ def selftest(n=200000):
             want = 0 if a == b else (1 if a > b else -1)
             if cmp64(a, b) != want:
                 bad += 1
-    rnd = random.Random(20260810)
+    if seed is None:
+        seed = int.from_bytes(_os.urandom(8), "big")
+    rnd = random.Random(seed)
     for _ in range(n):
         a, b = rnd.getrandbits(64), rnd.getrandbits(64)
         checked += 1
@@ -214,15 +235,16 @@ def selftest(n=200000):
         want = 0 if a == b else (1 if a > b else -1)
         if cmp64(a, b) != want:
             bad += 1
-    return {"checked": checked, "mismatches": bad, "verdict": VERDICT}
+    return {"checked": checked, "mismatches": bad, "seed": seed,
+            "verdict": VERDICT}
 
 
 if __name__ == "__main__":
     print(__doc__.split("=====")[0])
     for k, v in LANES.items():
-        print("  %-8s %-8s size %-2d %8d evals  sweep %.1fs  (%d bits in)"
-              % (k, v["verdict"], v["size"], v["evals"], v["sweep_secs"],
-                 v["bits_in"]))
+        print("  %-8s %-8s size %-2d  sweep %.1fs  (%d bits in)  %s"
+              % (k, v["verdict"], v["size"], v["sweep_secs"],
+                 v["bits_in"], v["expr"]))
     r = selftest()
     print("\nselftest: %d pairs checked, %d mismatches"
           % (r["checked"], r["mismatches"]))

@@ -74,11 +74,19 @@ def revbits64(x: int) -> int:
     return (((r(lo) & 0xFFFFFFFF) << 32) | (r(hi) & 0xFFFFFFFF)) & _M64
 
 
-def selftest(n: int = 200000) -> dict:
-    """TESTING, and it says so: edge values plus deterministic random,
-    checked against Python's own big-int arithmetic."""
+def selftest(n: int = 200000, seed=None) -> dict:
+    """TESTING, and it says so: edge values plus seeded random, checked
+    against Python's own big-int arithmetic.
+
+    `seed` defaults to ENTROPY — a fixed default seed meant every run
+    tested the identical 4,000,169 inputs forever, which an adversarial
+    review called "fuzzing with the good parts removed". It was right.
+    Pass a seed to reproduce a run; the seed used is in the result."""
+    import os as _os
     import random
-    rng = random.Random(20260812)
+    if seed is None:
+        seed = int.from_bytes(_os.urandom(8), "big")
+    rng = random.Random(seed)
     edges = [0, 1, 2, 0xFF, 0xFFFF, 0xFFFFFFFF, 0x100000000,
              0x5555555555555555, 0xAAAAAAAAAAAAAAAA,
              0x7FFFFFFFFFFFFFFF, 0x8000000000000000, _M64]
@@ -95,4 +103,4 @@ def selftest(n: int = 200000) -> dict:
             bad += 1
         if revbits64(x) != int(bin(x & _M64)[2:].zfill(64)[::-1], 2):
             bad += 1
-    return {"checked": checked, "mismatches": bad, "verdict": verdict64()}
+    return {"checked": checked, "mismatches": bad, "verdict": verdict64(), "seed": seed}
