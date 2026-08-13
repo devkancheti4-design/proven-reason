@@ -258,9 +258,10 @@ _SUITE64 = r"""
 #include <stdlib.h>
 __attribute__((noinline)) long long F(long long a, long long b){ %s }
 __attribute__((noinline)) long long G(long long a, long long b){ %s }
-static unsigned long long st=88172645463325252ULL;
+static unsigned long long st;   /* seeded per run — see _suite64 */
 static unsigned long long rnd(void){st^=st<<13;st^=st>>7;st^=st<<17;return st;}
-int main(void){
+int main(int argc, char **argv){
+  st=strtoull(argv[1],0,10); if(!st) st=1; /* 0 is xorshift's fixed point */
   unsigned long long E[]={0ULL,1ULL,2ULL,0xFFFFULL,0x10000ULL,0x7FFFFFFFULL,
     0x80000000ULL,0xFFFFFFFFULL,0x100000000ULL,0xFFFFFFFFFFFFULL,
     0x7FFFFFFFFFFFFFFFULL,0x8000000000000000ULL,0xFFFFFFFFFFFFFFFFULL};
@@ -315,9 +316,19 @@ _LANES_C = {
 }
 
 
-def _suite64(candidate: str, reference: str, timeout: float = 300.0):
+def _suite64(candidate: str, reference: str, timeout: float = 300.0,
+             seed=None):
+    """THE SEED IS ENTROPY BY DEFAULT, and this docstring is why: the suite
+    used to bake Marsaglia's constant into the C, so every run on every
+    machine tested the IDENTICAL 4,000,169 pairs, forever. A defect wrong
+    on 1-in-2^30 inputs had a ~0.4% chance of ever being seen, frozen at
+    that. A fuzzer's whole value is that run N+1 explores what run N did
+    not. Pass `seed=` to reproduce a run; the seed used is always
+    returned."""
     import subprocess
     import tempfile
+    if seed is None:
+        seed = int.from_bytes(os.urandom(8), "big") or 1
     d = tempfile.mkdtemp(prefix="proven-reason-")
     src, exe = os.path.join(d, "s64.c"), os.path.join(d, "s64")
     with open(src, "w") as f:
@@ -326,17 +337,18 @@ def _suite64(candidate: str, reference: str, timeout: float = 300.0):
                       capture_output=True).returncode:
         return ("NO-COMPILE", -1, 0)
     try:
-        out = subprocess.run([exe], capture_output=True, text=True,
-                             timeout=timeout).stdout
+        out = subprocess.run([exe, str(seed)], capture_output=True,
+                             text=True, timeout=timeout).stdout
     except subprocess.TimeoutExpired:
-        return ("NON-TERMINATING", -1, 0)
+        return ("NON-TERMINATING", -1, 0, seed)
     if not out.strip():
-        return ("NO-COMPILE", -1, 0)
+        return ("NO-COMPILE", -1, 0, seed)
     bad, n = (int(v) for v in out.split())
-    return ("TESTED", 0, n) if bad == 0 else ("WRONG", bad, n)
+    return (("TESTED", 0, n, seed) if bad == 0
+            else ("WRONG", bad, n, seed))
 
 
-def gate64(candidate: str, reference: str) -> "Gated":
+def gate64(candidate: str, reference: str, seed=None) -> "Gated":
     """Gate a `long long f(long long a, long long b)` body.
 
     Verification is a 4,000,169-pair edge-heavy suite — the strongest word
@@ -344,7 +356,7 @@ def gate64(candidate: str, reference: str) -> "Gated":
     failure, each proven-lane composition is tried against the reference;
     one that survives the suite ships as FIX. Otherwise: REFUSE.
     """
-    v, bad, n = _suite64(candidate, reference)
+    v, bad, n, seed = _suite64(candidate, reference, seed=seed)
     fake = Verdict("PROVEN" if False else v if v in ("NON-TERMINATING",
                                                      "NO-COMPILE")
                    else ("PROVEN" if v == "TESTED" else "WRONG"),
@@ -352,10 +364,11 @@ def gate64(candidate: str, reference: str) -> "Gated":
     if v == "TESTED":
         return Gated("PASS", candidate, fake, None,
                      "the generator's own code, TESTED clean on %s 64-bit "
-                     "pairs (suite, not proof — 2^128 cannot be swept)"
-                     % "{:,}".format(n))
+                     "pairs (suite, not proof — 2^128 cannot be swept; "
+                     "seed %d, fresh each run)"
+                     % ("{:,}".format(n), seed))
     for name, body in _LANES_C.items():
-        lv, lbad, ln = _suite64(body, reference)
+        lv, lbad, ln, _ls = _suite64(body, reference)
         if lv == "TESTED":
             return Gated("FIX", body, fake, None,
                          "rejected (%s on %s pairs); the %s lane composition "
